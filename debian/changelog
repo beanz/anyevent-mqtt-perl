@@ -1,0 +1,5 @@
+libanyevent-mqtt-perl (0.1-1) unstable; urgency=low
+
+  * Initial release.
+
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Tue, 11 Jan 2011 19:30:05 +0000
