@@ -105,22 +105,40 @@ sub new {
 }
 
 sub publish {
-  my ($self, $data, $topic, $qos) = @_;
-  print STDERR "publish: $data => $topic\n" if DEBUG;
-  my $ref = ref $data;
-  if ($ref) {
-    if ($ref) {
-    }
-    
-  } else {
+  my ($self, $data, $topic, %p) = @_;
+  my $qos = $p{qos} || MQTT_QOS_AT_MOST_ONCE;
+  unless (ref $data) {
+    print STDERR "publish: simple[$data] => $topic\n" if DEBUG;
     my $mid = $self->{message_id}++;
-    $qos = MQTT_QOS_AT_MOST_ONCE unless (defined $qos);
     $self->_send(message_type => MQTT_PUBLISH,
                  qos => $qos,
                  topic => $topic,
                  message_id => $mid,
                  message => $data);
+    return;
   }
+  my $handle;
+  if ($data->isa('AnyEvent::Handle')) {
+    $handle = $data;
+  } else {
+    my @args = @{$p{handle_args}||[]};
+    print STDERR "publish: IO[$data] => $topic @args\n" if DEBUG;
+    $handle = AnyEvent::Handle->new(fh => $data, @args);
+  }
+  my $sub; $sub = sub {
+    my ($hdl, $chunk, $eol) = @_;
+    print STDERR "publish: $chunk => $topic\n" if DEBUG;
+    my $mid = $self->{message_id}++;
+    $self->_send(message_type => MQTT_PUBLISH,
+                 qos => $qos,
+                 topic => $topic,
+                 message_id => $mid,
+                 message => $chunk);
+    $handle->push_read(@{$p{push_read_args}||['line']} => $sub);
+    return;
+  };
+  $handle->push_read(@{$p{push_read_args}||['line']} => $sub);
+  return $handle;
 }
 
 sub subscribe {
