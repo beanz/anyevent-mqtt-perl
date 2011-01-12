@@ -104,6 +104,25 @@ sub new {
           }, $pkg;
 }
 
+sub publish {
+  my ($self, $data, $topic, $qos) = @_;
+  print STDERR "publish: $data => $topic\n" if DEBUG;
+  my $ref = ref $data;
+  if ($ref) {
+    if ($ref) {
+    }
+    
+  } else {
+    my $mid = $self->{message_id}++;
+    $qos = MQTT_QOS_AT_MOST_ONCE unless (defined $qos);
+    $self->_send(message_type => MQTT_PUBLISH,
+                 qos => $qos,
+                 topic => $topic,
+                 message_id => $mid,
+                 message => $data);
+  }
+}
+
 sub subscribe {
   my ($self, $topic, $sub, $qos, $cv) = @_;
   $cv = AnyEvent->condvar unless (defined $cv);
