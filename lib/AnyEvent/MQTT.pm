@@ -56,6 +56,28 @@ The timeout for responses from the server.
 
 The keep alive timer.
 
+=item C<will_topic>
+
+Set topic for will message.  Default is undef which means no will
+message will be configured.
+
+=item C<will_qos>
+
+Set QoS for will message.  Default is 'at-most-once'.
+
+=item C<will_retain>
+
+Set retain flag for will message.  Default is 0.
+
+=item C<will_message>
+
+Set message for will message.  Default is the empty message.
+
+=item C<client_id>
+
+Sets the client id for the client overriding the default which
+is C<Net::MQTT::Message[NNNNN]> where NNNNN is the process id.
+
 =back
 
 =cut
@@ -77,6 +99,8 @@ sub new {
            will_qos => MQTT_QOS_AT_MOST_ONCE,
            will_retain => 0,
            will_message => '',
+           client_id => undef,
+           %p,
           }, $pkg;
 }
 
