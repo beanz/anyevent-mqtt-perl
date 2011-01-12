@@ -179,6 +179,22 @@ sub _handle_message {
     $self->_confirm_subscription($msg->message_id, $msg->qos_levels->[0]);
     return
   }
+  if ($type == MQTT_PUBLISH) {
+    # TODO: handle puback, etc
+    my $rec = $self->{_sub}->{$msg->topic_name};
+    my $matched;
+    if ($rec) {
+      $matched++;
+      foreach my $cb (@{$rec->{cb}}) {
+        $cb->($msg);
+      }
+    }
+    # TODO: handle regex topic matching
+    unless ($matched) {
+      print STDERR "Unexpected publish:\n", $msg->string('  '), "\n" if DEBUG;
+    }
+    return
+  }
   print STDERR $msg->string(), "\n";
 }
 
