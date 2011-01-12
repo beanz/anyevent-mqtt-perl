@@ -195,6 +195,7 @@ sub _connect {
                             $self->cleanup('Connection closed');
                           },
                           on_connect => sub {
+                            print STDERR "TCP handshake complete\n" if DEBUG;
                             my $msg =
                               Net::MQTT::Message->new(
                                 message_type => MQTT_CONNECT,
