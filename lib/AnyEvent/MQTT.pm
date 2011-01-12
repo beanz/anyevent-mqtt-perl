@@ -207,6 +207,10 @@ sub _send {
 sub _real_send {
   my ($self, $msg) = @_;
   print STDERR "Sending: ", $msg->string, "\n" if DEBUG;
+  undef $self->{_keep_alive_handle};
+  $self->{_keep_alive_handle} =
+    AnyEvent->timer(after => $self->{keep_alive_timer},
+                    cb => sub { $self->_send(message_type => MQTT_PINGREQ) });
   return $self->{handle}->push_write($msg->bytes);
 }
 
@@ -258,6 +262,7 @@ sub _handle_message {
   return $self->cleanup($error) if ($error);
   my $type = $msg->message_type;
   if ($type == MQTT_CONNACK) {
+    $handle->timeout(undef);
     print STDERR "Connection ready:\n", $msg->string('  '), "\n" if DEBUG;
     foreach my $msg (@{$self->{connect_queue}||[]}) {
       $self->_real_send($msg);
