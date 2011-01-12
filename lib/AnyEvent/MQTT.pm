@@ -194,6 +194,7 @@ sub _connect {
                               Net::MQTT::Message->new(
                                 message_type => MQTT_CONNECT,
                                 keep_alive_timer => $self->{keep_alive_timer},
+                                client_id => $self->{client_id},
                                 will_topic => $self->{will_topic},
                                 will_qos => $self->{will_qos},
                                 will_retain => $self->{will_retain},
