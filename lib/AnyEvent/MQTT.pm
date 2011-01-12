@@ -8,7 +8,10 @@ package AnyEvent::MQTT;
 
   use AnyEvent::MQTT;
   my $mqtt = AnyEvent::MQTT->new;
-  $mqtt->subscribe('/topic' => sub { print $_[0]->message });
+  $mqtt->subscribe('/topic' => sub {
+                                 my ($topic, $message) = @_;
+                                 print $topic, ' ', $message, "\n"
+                               });
 
   # publish a simple message
   $mqtt->publish('simple message' => '/topic');
@@ -119,8 +122,16 @@ sub _confirm_subscription {
     carp "Got SubAck with no pending subscription for message id: $mid\n";
     return;
   }
-  my $rec = $self->{_sub}->{$topic} = delete $self->{_sub_pending}->{$topic};
+  my $re = topic_to_regexp($topic); # convert MQTT pattern to regexp
+  my $rec;
+  if ($re) {
+    $rec = $self->{_subre}->{$topic} = delete $self->{_sub_pending}->{$topic};
+    $rec->{re} = $re;
+  } else {
+    $rec = $self->{_sub}->{$topic} = delete $self->{_sub_pending}->{$topic};
+  }
   $rec->{qos} = $qos;
+
   foreach my $cv (@{$rec->{cv}}) {
     $cv->send($qos);
   }
@@ -192,16 +203,27 @@ sub _handle_message {
   }
   if ($type == MQTT_PUBLISH) {
     # TODO: handle puback, etc
-    my $rec = $self->{_sub}->{$msg->topic_name};
-    my $matched;
+    my $msg_topic = $msg->topic_name;
+    my $msg_data = $msg->message;
+    my $rec = $self->{_sub}->{$msg_topic};
+    my %matched;
     if ($rec) {
-      $matched++;
       foreach my $cb (@{$rec->{cb}}) {
-        $cb->($msg);
+        next if ($matched{$cb}++);
+        $cb->($msg_topic, $msg_data, $msg);
+      }
+    }
+    foreach my $topic (keys %{$self->{_subre}}) {
+      $rec = $self->{_subre}->{$topic};
+      my $re = $rec->{re};
+      next unless ($msg_topic =~ $re);
+      foreach my $cb (@{$rec->{cb}}) {
+        next if ($matched{$cb}++);
+        $cb->($msg_topic, $msg_data, $msg);
       }
     }
     # TODO: handle regex topic matching
-    unless ($matched) {
+    unless (scalar keys %matched) {
       print STDERR "Unexpected publish:\n", $msg->string('  '), "\n" if DEBUG;
     }
     return
