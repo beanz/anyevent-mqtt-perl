@@ -10,6 +10,12 @@ package AnyEvent::MQTT;
   my $mqtt = AnyEvent::MQTT->new;
   $mqtt->subscribe('/topic' => sub { print $_[0]->message });
 
+  # publish a simple message
+  $mqtt->publish('simple message' => '/topic');
+
+  # publish line-by-line from file handle
+  $mqtt->publish(\*STDIN => '/topic');
+
 =head1 DESCRIPTION
 
 AnyEvent module for MQTT client.  THIS API IS AN EARLY RELEASE AND IS
