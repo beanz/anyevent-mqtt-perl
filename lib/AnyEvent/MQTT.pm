@@ -162,10 +162,15 @@ sub _confirm_subscription {
 }
 
 sub _send {
+  my $self = shift;
+  my $msg = ref $_[0] ? $_[0] : Net::MQTT::Message->new(@_);
+  $self->{connected} ? $self->_real_send($msg) : $self->_connect($msg);
+}
+
+sub _real_send {
   my ($self, $msg) = @_;
-  $self->{connected}
-    ? $self->{handle}->push_write($msg->bytes)
-      : $self->_connect($msg);
+  print STDERR "Sending: ", $msg->string, "\n" if DEBUG;
+  return $self->{handle}->push_write($msg->bytes);
 }
 
 sub _connect {
@@ -200,7 +205,7 @@ sub _connect {
                                 will_retain => $self->{will_retain},
                                 will_message => $self->{will_message},
                               );
-                            $hd->push_write($msg->bytes);
+                            $self->_real_send($msg);
                             $hd->timeout($self->{timeout});
                             $hd->push_read(ref $self => sub {
                                              $self->_handle_message(@_);
@@ -217,8 +222,9 @@ sub _handle_message {
   if ($type == MQTT_CONNACK) {
     print STDERR "Connection ready:\n", $msg->string('  '), "\n" if DEBUG;
     foreach my $msg (@{$self->{connect_queue}||[]}) {
-      $self->{handle}->push_write($msg->bytes);
+      $self->_real_send($msg);
     }
+    $self->{connected} = 1;
     return
   }
   if ($type == MQTT_SUBACK) {
