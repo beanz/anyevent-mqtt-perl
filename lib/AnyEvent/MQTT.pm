@@ -152,7 +152,12 @@ sub _connect {
                             my $msg =
                               Net::MQTT::Message->new(
                                 message_type => MQTT_CONNECT,
-                                keep_alive_timer => $self->{keep_alive_timer});
+                                keep_alive_timer => $self->{keep_alive_timer},
+                                will_topic => $self->{will_topic},
+                                will_qos => $self->{will_qos},
+                                will_retain => $self->{will_retain},
+                                will_message => $self->{will_message},
+                              );
                             $hd->push_write($msg->bytes);
                             $hd->timeout($self->{timeout});
                             $hd->push_read(ref $self => sub {
