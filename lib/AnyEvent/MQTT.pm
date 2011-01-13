@@ -100,6 +100,7 @@ sub new {
            will_retain => 0,
            will_message => '',
            client_id => undef,
+           connect_queue => [],
            %p,
           }, $pkg;
 }
@@ -264,7 +265,8 @@ sub _handle_message {
   if ($type == MQTT_CONNACK) {
     $handle->timeout(undef);
     print STDERR "Connection ready:\n", $msg->string('  '), "\n" if DEBUG;
-    foreach my $msg (@{$self->{connect_queue}||[]}) {
+    while (@{$self->{connect_queue}}) {
+      my $msg = shift @{$self->{connect_queue}};
       $self->_real_send($msg);
     }
     $self->{connected} = 1;
