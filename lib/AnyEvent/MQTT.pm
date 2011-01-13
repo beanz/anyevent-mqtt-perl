@@ -105,6 +105,15 @@ sub new {
           }, $pkg;
 }
 
+sub cleanup {
+  my $self = shift;
+  print STDERR "cleanup\n" if DEBUG;
+  delete $self->{handle};
+  delete $self->{connected};
+  $self->{connect_queue} = [];
+  $self->{on_error}->(@_) if ($self->{on_error});
+}
+
 sub publish {
   my ($self, $data, $topic, %p) = @_;
   my $qos = $p{qos} || MQTT_QOS_AT_MOST_ONCE;
