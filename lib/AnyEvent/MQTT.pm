@@ -135,8 +135,9 @@ sub publish {
     print STDERR "publish: IO[$data] => $topic @args\n" if DEBUG;
     $handle = AnyEvent::Handle->new(fh => $data, @args);
   }
+  my @push_read_args = @{$p{push_read_args}||['line']};
   my $sub; $sub = sub {
-    my ($hdl, $chunk, $eol) = @_;
+    my ($hdl, $chunk, @args) = @_;
     print STDERR "publish: $chunk => $topic\n" if DEBUG;
     my $mid = $self->{message_id}++;
     $self->_send(message_type => MQTT_PUBLISH,
@@ -144,10 +145,10 @@ sub publish {
                  topic => $topic,
                  message_id => $mid,
                  message => $chunk);
-    $handle->push_read(@{$p{push_read_args}||['line']} => $sub);
+    $handle->push_read(@push_read_args => $sub);
     return;
   };
-  $handle->push_read(@{$p{push_read_args}||['line']} => $sub);
+  $handle->push_read(@push_read_args => $sub);
   return $handle;
 }
 
