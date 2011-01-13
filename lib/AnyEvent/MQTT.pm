@@ -296,7 +296,6 @@ sub _handle_message {
         $cb->($msg_topic, $msg_data, $msg);
       }
     }
-    # TODO: handle regex topic matching
     unless (scalar keys %matched) {
       print STDERR "Unexpected publish:\n", $msg->string('  '), "\n" if DEBUG;
     }
