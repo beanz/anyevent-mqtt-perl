@@ -277,7 +277,7 @@ sub _handle_message {
   }
   if ($type == MQTT_PUBLISH) {
     # TODO: handle puback, etc
-    my $msg_topic = $msg->topic_name;
+    my $msg_topic = $msg->topic;
     my $msg_data = $msg->message;
     my $rec = $self->{_sub}->{$msg_topic};
     my %matched;
