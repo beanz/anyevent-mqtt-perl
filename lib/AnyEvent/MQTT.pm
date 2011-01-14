@@ -169,19 +169,20 @@ sub _add_subscription {
   my ($self, $topic, $sub, $cv) = @_;
   my $rec = $self->{_sub}->{$topic};
   if ($rec) {
-    # existing subscription
+    print STDERR "Add $sub to existing $topic subscription\n" if DEBUG;
     push @{$rec->{cb}}, $sub;
     $cv->send($rec->{qos});
     return;
   }
   $rec = $self->{_sub_pending}->{$topic};
   if ($rec) {
-    # existing pending subscription
+    print STDERR "Add $sub to existing pending $topic subscription\n" if DEBUG;
     push @{$rec->{cb}}, $sub;
     push @{$rec->{cv}}, $cv;
     return;
   }
   my $mid = $self->{message_id}++;
+  print STDERR "Add $sub as pending $topic subscription (mid=$mid)\n" if DEBUG;
   $self->{_sub_pending_by_message_id}->{$mid} = $topic;
   $self->{_sub_pending}->{$topic} = { cb => [ $sub ], cv => [ $cv ] };
   $mid;
