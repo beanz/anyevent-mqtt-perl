@@ -116,7 +116,7 @@ sub cleanup {
 
 sub publish {
   my ($self, $data, $topic, %p) = @_;
-  my $qos = $p{qos} || MQTT_QOS_AT_MOST_ONCE;
+  my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
   unless (ref $data) {
     print STDERR "publish: simple[$data] => $topic\n" if DEBUG;
     my $mid = $self->{message_id}++;
