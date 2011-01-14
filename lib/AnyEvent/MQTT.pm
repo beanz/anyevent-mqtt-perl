@@ -310,7 +310,7 @@ sub _handle_message {
       }
     }
     unless (scalar keys %matched) {
-      print STDERR "Unexpected publish:\n", $msg->string('  '), "\n" if DEBUG;
+      carp "Unexpected publish:\n", $msg->string('  '), "\n";
     }
     return
   }
