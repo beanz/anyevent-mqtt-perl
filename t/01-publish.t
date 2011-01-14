@@ -7,6 +7,7 @@ use constant {
   DEBUG => $ENV{ANYEVENT_MQTT_TEST_DEBUG}
 };
 use File::Temp qw/tempfile/;
+use Net::MQTT::Constants;
 
 $|=1;
 
@@ -71,13 +72,13 @@ plan tests => 11;
 
 use_ok('AnyEvent::MQTT');
 
-my $ow = AnyEvent::MQTT->new(host => $host, port => $port,
+my $mqtt = AnyEvent::MQTT->new(host => $host, port => $port,
                              client_id => 'acme_mqtt');
 
-ok($ow, 'instantiate AnyEvent::MQTT object');
+ok($mqtt, 'instantiate AnyEvent::MQTT object');
 
 $published = AnyEvent->condvar;
-$ow->publish('message' => '/topic');
+$mqtt->publish('message' => '/topic');
 
 is($published->recv, 1, '... simple published complete');
 
@@ -88,13 +89,15 @@ sysseek $fh, 0, 0;
 
 $published = AnyEvent->condvar;
 $error = AnyEvent->condvar;
-$ow->publish($fh => '/topic', handle_args => [ on_error => sub {
-                                                 my ($hdl, $fatal, $msg) = @_;
-                                                 # error on fh close as
-                                                 # readers are waiting
-                                                 $error->send($!);
-                                                 $hdl->destroy;
-                                               }]);
+$mqtt->publish($fh => '/topic',
+               qos => MQTT_QOS_AT_MOST_ONCE,
+               handle_args => [ on_error => sub {
+                                  my ($hdl, $fatal, $msg) = @_;
+                                  # error on fh close as
+                                  # readers are waiting
+                                $error->send($!);
+                                  $hdl->destroy;
+                                }]);
 is($error->recv, 'Broken pipe', '... expected broken pipe');
 is($published->recv, 2, '... file handle published complete');
 
@@ -113,7 +116,7 @@ $handle = AnyEvent::Handle->new(fh => $fh,
                                   $error->send($!);
                                   $hdl->destroy;
                                 });
-$ow->publish($handle => '/topic', push_read_args => ['line', "\0"]);
+$mqtt->publish($handle => '/topic', push_read_args => ['line', "\0"]);
 is($error->recv, 'Broken pipe', '... expected broken pipe');
 is($published->recv, 3, '... file handle published complete');
 

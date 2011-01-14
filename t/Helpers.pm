@@ -159,10 +159,15 @@ sub handle_connection {
   my ($desc, $recv, $send) = @{$rec}{qw/desc recv send/};
   $send =~ s/\s+//g if (defined $send);
   unless (defined $recv) {
-    print STDERR "Sending: ", $send if DEBUG;
-    $send = pack "H*", $send;
-    print STDERR "Sending ", length $send, " bytes\n" if DEBUG;
-    $handle->push_write($send);
+    if (ref $send) {
+      print STDERR $send."->send:\n" if DEBUG;
+      $send->();
+    } else {
+      print STDERR "Sending: ", $send if DEBUG;
+      $send = pack "H*", $send;
+      print STDERR "Sending ", length $send, " bytes\n" if DEBUG;
+      $handle->push_write($send);
+    }
     handle_connection($handle, $actions);
     return;
   }
