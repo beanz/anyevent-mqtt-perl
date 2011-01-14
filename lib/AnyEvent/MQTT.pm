@@ -324,7 +324,7 @@ sub anyevent_read_type {
     return unless (defined $$rbuf);
     while (1) {
       my $msg = Net::MQTT::Message->new_from_bytes($$rbuf, 1);
-      return unless ($msg);
+      last unless ($msg);
       $cb->($handle, $msg);
     }
     return;
