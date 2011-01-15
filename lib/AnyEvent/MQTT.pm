@@ -90,6 +90,7 @@ sub new {
            host => '127.0.0.1',
            port => '1883',
            timeout => 30,
+           wait => 'nothing',
            keep_alive_timer => 120,
            qos => MQTT_QOS_AT_MOST_ONCE,
            message_id => 1,
@@ -111,7 +112,14 @@ sub cleanup {
   delete $self->{handle};
   delete $self->{connected};
   $self->{connect_queue} = [];
-  $self->{on_error}->(@_) if ($self->{on_error});
+}
+
+sub error {
+  my ($self, $fatal, $message) = @_;
+  if ($fatal) {
+    $self->cleanup($message);
+  }
+  $self->{on_error}->($fatal, $message) if ($self->{on_error});
 }
 
 sub publish {
@@ -213,39 +221,72 @@ sub _confirm_subscription {
 sub _send {
   my $self = shift;
   my $msg = ref $_[0] ? $_[0] : Net::MQTT::Message->new(@_);
-  $self->{connected} ? $self->_real_send($msg) : $self->_connect($msg);
+  $self->{connected} ? $self->_real_send($msg) : $self->connect($msg);
 }
 
 sub _real_send {
   my ($self, $msg) = @_;
   print STDERR "Sending: ", $msg->string, "\n" if DEBUG;
-  undef $self->{_keep_alive_handle};
-  $self->{_keep_alive_handle} =
-    AnyEvent->timer(after => $self->{keep_alive_timer},
-                    cb => sub { $self->_send(message_type => MQTT_PINGREQ) });
+  $self->_reset_keep_alive_timer();
   return $self->{handle}->push_write($msg->bytes);
 }
 
-sub _connect {
+sub _reset_keep_alive_timer {
+  my ($self, $wait) = @_;
+  undef $self->{_keep_alive_handle};
+  my $method = $wait ? '_keep_alive_timeout' : '_send_keep_alive';
+  $self->{_keep_alive_waiting} = $wait;
+  $self->{_keep_alive_handle} =
+    AnyEvent->timer(after => $self->{keep_alive_timer},
+                    cb => sub { $self->$method(@_) });
+}
+
+sub _send_keep_alive {
+  my $self = shift;
+  print STDERR "Sending: keep alive\n" if DEBUG;
+  $self->_send(message_type => MQTT_PINGREQ);
+  $self->_reset_keep_alive_timer(1);
+}
+
+sub _keep_alive_timeout {
+  my $self = shift;
+  print STDERR "keep alive timeout\n" if DEBUG;
+  undef $self->{_keep_alive_waiting};
+  $self->{handle}->destroy;
+  $self->error(0, 'keep alive timeout');
+}
+
+sub _keep_alive_received {
+  my $self = shift;
+  print STDERR "keep alive received\n" if DEBUG;
+  return unless (defined $self->{_keep_alive_waiting});
+  $self->_reset_keep_alive_timer();
+}
+
+sub connect {
   my ($self, $msg) = @_;
   if ($msg) {
     push @{$self->{connect_queue}}, $msg;
   }
   return if ($self->{handle});
+  my $cv = $self->{connect_cv} = AnyEvent->condvar;
   my $hd;
   $hd = $self->{handle} =
     AnyEvent::Handle->new(connect => [$self->{host}, $self->{port}],
                           on_error => sub {
-                            print STDERR "handle error $_[2]\n" if DEBUG;
-                            $_[0]->destroy;
-                            if ($_[1]) {
-                              $self->cleanup($_[2]);
-                            }
+                            my $handle = shift;
+                            print STDERR "handle error $_[1]\n" if DEBUG;
+                            $handle->destroy;
+                            $self->error(@_);
                           },
                           on_eof => sub {
                             print STDERR "handle eof\n" if DEBUG;
                             $_[0]->destroy;
-                            $self->cleanup('Connection closed');
+                            $self->error(0, 'Connection closed');
+                          },
+                          on_timeout => sub {
+                            $self->error(0, $self->{wait}.' timeout');
+                            $self->{wait} = 'nothing';
                           },
                           on_connect => sub {
                             print STDERR "TCP handshake complete\n" if DEBUG;
@@ -261,17 +302,18 @@ sub _connect {
                               );
                             $self->_real_send($msg);
                             $hd->timeout($self->{timeout});
+                            $self->{wait} = 'connack';
                             $hd->push_read(ref $self => sub {
                                              $self->_handle_message(@_);
                                              return;
                                            });
                           });
-  return
+  return $cv
 }
 
 sub _handle_message {
   my ($self, $handle, $msg, $error) = @_;
-  return $self->cleanup($error) if ($error);
+  return $self->error(0, $error) if ($error);
   my $type = $msg->message_type;
   if ($type == MQTT_CONNACK) {
     $handle->timeout(undef);
@@ -281,7 +323,12 @@ sub _handle_message {
       $self->_real_send($msg);
     }
     $self->{connected} = 1;
+    $self->{connect_cv}->send(1);
+    delete $self->{connect_cv};
     return
+  }
+  if ($type == MQTT_PINGRESP) {
+    return $self->_keep_alive_received();
   }
   if ($type == MQTT_SUBACK) {
     print STDERR "Confirmed subscription:\n", $msg->string('  '), "\n" if DEBUG;
