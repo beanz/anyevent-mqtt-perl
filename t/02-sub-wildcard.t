@@ -68,7 +68,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 my ($host,$port) = @{$cv->recv};
 my $addr = join ':', $host, $port;
 
-plan tests => 14;
+plan tests => 17;
 
 use_ok('AnyEvent::MQTT');
 
@@ -77,10 +77,12 @@ my $mqtt = AnyEvent::MQTT->new(host => $host, port => $port,
 
 ok($mqtt, 'instantiate AnyEvent::MQTT object');
 
+my %c;
 my $t1_cv = AnyEvent->condvar;
 my $t1_sub = $mqtt->subscribe('/t/+',
                             sub {
                               my ($topic, $message) = @_;
+                              $c{t1}++;
                               $t1_cv->send($topic.' '.$message);
                             });
 
@@ -88,6 +90,7 @@ my $t2_cv = AnyEvent->condvar;
 my $t2_sub = $mqtt->subscribe('/t/#',
                             sub {
                               my ($topic, $message) = @_;
+                              $c{t2}++;
                               $t2_cv->send($topic.' '.$message);
                             },
                             MQTT_QOS_AT_MOST_ONCE,
@@ -97,6 +100,7 @@ my $t3_cv = AnyEvent->condvar;
 my $t3_sub = $mqtt->subscribe('/t/+/s',
                             sub {
                               my ($topic, $message) = @_;
+                              $c{t3}++;
                               $t3_cv->send($topic.' '.$message);
                             });
 
@@ -110,3 +114,6 @@ $t2_cv = AnyEvent->condvar;
 $mqtt->_send(message_type => MQTT_PINGREQ); # ping to trigger server to cont.
 is($t2_cv->recv, '/t/a/s message2', '... /t/# received message2');
 is($t3_cv->recv, '/t/a/s message2', '... /t/+/s received message2');
+is($c{t1}, 1, '... /t/+ call count');
+is($c{t2}, 2, '... /t/# call count');
+is($c{t3}, 1, '... /t/+/s call count');
