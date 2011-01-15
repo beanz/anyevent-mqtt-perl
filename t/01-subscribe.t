@@ -162,8 +162,7 @@ $t1_cv = AnyEvent->condvar;
 $t1_dup_cv = AnyEvent->condvar;
 $mqtt->_send(message_type => MQTT_PINGREQ); # ping to trigger server to cont.
 
-my $t1_msg;
-my $warn = test_warn(sub { $t1_msg = $t1_cv->recv });
+$warn = test_warn(sub { $t1_msg = $t1_cv->recv });
 is($t1_msg, '/t1 message4', '... /t1 message4');
 
 is($warn,
