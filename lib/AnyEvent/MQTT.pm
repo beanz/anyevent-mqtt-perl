@@ -119,19 +119,87 @@ sub new {
           }, $pkg;
 }
 
+sub DESTROY {
+  $_[0]->cleanup;
+}
+
+=method C<cleanup()>
+
+This method attempts to destroy any resources in the event of a
+disconnection or fatal error.
+
+=cut
+
 sub cleanup {
   my $self = shift;
   print STDERR "cleanup\n" if DEBUG;
   delete $self->{handle};
   delete $self->{connected};
+  delete $self->{wait};
+  delete $self->{_keep_alive_handle};
+  delete $self->{_keep_alive_waiting};
   $self->{connect_queue} = [];
 }
 
-sub error {
-  my ($self, $fatal, $message) = @_;
+sub _error {
+  my ($self, $fatal, $message, $reconnect) = @_;
   $self->cleanup($message);
   $self->{on_error}->($fatal, $message) if ($self->{on_error});
+  $self->_reconnect() if ($reconnect);
 }
+
+=method C<publish( $data, $topic, %parameters )>
+
+This method is used to publish to a given topic.  The data may be
+either:
+
+=over
+
+=item a string
+
+  in which case the string is published to the topic,
+
+=item an L<AnyEvent::Handle>
+
+  in which case the L<push_read()> method is called on it with a
+  callback that will publish each chunk read to the topic, or
+
+=item anything else
+
+  in which case it will be passed as the C<fh> parameter in the
+  construction of an L<AnyEvent::Handle> and treated as described
+  above.
+
+=back
+
+In the first case, undef is returned.  In the other cases, the
+used L<AnyEvent::Handle> object is returned and may be destroyed
+to prevent further publishing.
+
+The parameter hash may contain keys for:
+
+=over
+
+=item C<qos>
+
+  to set the QoS level for published messages (default
+  MQTT_QOS_AT_MOST_ONCE),
+
+=item C<handle_args>
+
+  a reference to a list to pass as arguments to the
+  L<AnyEvent::Handle> constructor in the final case above (defaults to
+  an empty list reference), or
+
+=item C<push_read_args>
+
+  a reference to a list to pass as the arguments to the
+  L<AnyEvent::Handle#push_read> method (defaults to ['line'] to read,
+  and subsequently publish, a line at a time.
+
+=back
+
+=cut
 
 sub publish {
   my ($self, $data, $topic, %p) = @_;
@@ -170,6 +238,19 @@ sub publish {
   $handle->push_read(@push_read_args => $sub);
   return $handle;
 }
+
+=method C<subscribe( $topic => $sub, [$qos, [$condvar]] )>
+
+This method is subscribes to the given topic.  The optional QoS
+parameter can be used to request a particular QoS (the default is
+MQTT_QOS_AT_MOST_ONCE).
+
+This method returns an L<AnyEvent> condvar that will be sent the
+negotiated QoS when the subscription is acknowledged.  The optional
+condvar parameter may be used to supply a condvar for this purpose
+otherwise one will be created.
+
+=cut
 
 sub subscribe {
   my ($self, $topic, $sub, $qos, $cv) = @_;
@@ -264,8 +345,7 @@ sub _keep_alive_timeout {
   print STDERR "keep alive timeout\n" if DEBUG;
   undef $self->{_keep_alive_waiting};
   $self->{handle}->destroy;
-  $self->error(0, 'keep alive timeout');
-  $self->reconnect();
+  $self->_error(0, 'keep alive timeout', 1);
 }
 
 sub _keep_alive_received {
@@ -275,29 +355,37 @@ sub _keep_alive_received {
   $self->_reset_keep_alive_timer();
 }
 
+=method C<connect( [ $msg ] )>
+
+This method starts the connection to the server.  It will be called
+lazily when required publish or subscribe so generally is should not
+be necessary to call it directly.
+
+=cut
+
 sub connect {
   my ($self, $msg) = @_;
   if ($msg) {
     push @{$self->{connect_queue}}, $msg;
   }
-  return if ($self->{handle});
+  return $self->{connect_cv} if ($self->{handle});
   my $cv = $self->{connect_cv} = AnyEvent->condvar;
   my $hd;
   $hd = $self->{handle} =
     AnyEvent::Handle->new(connect => [$self->{host}, $self->{port}],
                           on_error => sub {
-                            my $handle = shift;
+                            my ($handle, $fatal, $message) = @_;
                             print STDERR "handle error $_[1]\n" if DEBUG;
                             $handle->destroy;
-                            $self->error(@_);
+                            $self->_error($fatal, $message, 0);
                           },
                           on_eof => sub {
                             print STDERR "handle eof\n" if DEBUG;
                             $_[0]->destroy;
-                            $self->error(0, 'Connection closed');
+                            $self->_error(0, 'Connection closed');
                           },
                           on_timeout => sub {
-                            $self->error(0, $self->{wait}.' timeout');
+                            $self->_error(0, $self->{wait}.' timeout', 1);
                             $self->{wait} = 'nothing';
                           },
                           on_connect => sub {
@@ -324,7 +412,7 @@ sub connect {
   return $cv
 }
 
-sub reconnect {
+sub _reconnect {
   my $self = shift;
   print STDERR "reconnecting:\n" if DEBUG;
   $self->{clean_session} = 0;
@@ -333,7 +421,7 @@ sub reconnect {
 
 sub _handle_message {
   my ($self, $handle, $msg, $error) = @_;
-  return $self->error(0, $error) if ($error);
+  return $self->_error(0, $error, 1) if ($error);
   my $type = $msg->message_type;
   if ($type == MQTT_CONNACK) {
     $handle->timeout(undef);
@@ -383,6 +471,13 @@ sub _handle_message {
   }
   print STDERR $msg->string(), "\n";
 }
+
+=method C<anyevent_read_type()>
+
+This method is used to register an L<AnyEvent::Handle> read type
+method to read MQTT messages.
+
+=cut
 
 sub anyevent_read_type {
   my ($handle, $cb) = @_;
