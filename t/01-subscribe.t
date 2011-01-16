@@ -154,7 +154,7 @@ is($t1_msg, '/t1 message3', '... /t1 message3');
 
 is($warn,
    q{Unexpected publish:
-  Publish/at-most-once /t3 
+  Publish/at-most-once /t3 }.q{
   6d 65 73 73 61 67 65 31                          message1},
    '... unsolicited message warning');
 
