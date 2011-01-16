@@ -47,6 +47,25 @@ my @connections =
      sleep => 0.5,
     },
    ],
+   [
+    {
+     desc => q{connect},
+     recv => '10 17
+              00 06 4D 51 49 73 64 70
+              03 00 00 78
+              00 09 61 63 6D 65 5F 6D 71 74 74',
+     send => '20 02 00 00',
+    },
+    {
+     desc => q{subscribe /t1},
+     recv => '82 08 00 01 00 03 2F 74 31 00',
+     send => '90 03 00 01 00',
+    },
+    {
+     desc => q{publish /t1 message1},
+     send => '30 0d 00 03 2f 74 31 6d 65 73  73 61 67 65 31',
+    },
+   ],
   );
 
 my $cv = AnyEvent->condvar;
@@ -57,7 +76,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 my ($host,$port) = @{$cv->recv};
 my $addr = join ':', $host, $port;
 
-plan tests => 6;
+plan tests => 10;
 
 use_ok('AnyEvent::MQTT');
 
@@ -75,7 +94,17 @@ my $timer = AnyEvent->timer(after => 0.3, cb => sub { $cv->send(1); });
 $cv->recv;
 
 $cv = AnyEvent->condvar;
-$timer = AnyEvent->timer(after => 0.5, cb => sub { $cv->send([0,'oops']); });
+$timer = AnyEvent->timer(after => 0.5, cb => sub { $cv->send(0,'oops'); });
 $mqtt->{on_error} = sub { $cv->send(@_); };
 is_deeply([$cv->recv], [0, 'keep alive timeout'],
           'non-fatal keep alive timeout error');
+
+$mqtt->{keep_alive_timer} = 120; # hack keep alive timer back to default
+$cv = AnyEvent->condvar;
+my $sub_cv = $mqtt->subscribe('/t1',
+                            sub {
+                              my ($topic, $message) = @_;
+                              $cv->send($topic.' '.$message);
+                            });
+is($sub_cv->recv, 0, 'subscribe after reconnect');
+is($cv->recv, '/t1 message1', '... received message');

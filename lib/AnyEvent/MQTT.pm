@@ -80,6 +80,11 @@ Set retain flag for will message.  Default is 0.
 
 Set message for will message.  Default is the empty message.
 
+=item C<clean_session>
+
+Set clean session flag for connect message.  Default is 1 but
+it is set to 0 when reconnecting after an error.
+
 =item C<client_id>
 
 Sets the client id for the client overriding the default which
@@ -108,6 +113,7 @@ sub new {
            will_retain => 0,
            will_message => '',
            client_id => undef,
+           clean_session => 1,
            connect_queue => [],
            %p,
           }, $pkg;
@@ -123,9 +129,7 @@ sub cleanup {
 
 sub error {
   my ($self, $fatal, $message) = @_;
-  if ($fatal) {
-    $self->cleanup($message);
-  }
+  $self->cleanup($message);
   $self->{on_error}->($fatal, $message) if ($self->{on_error});
 }
 
@@ -261,6 +265,7 @@ sub _keep_alive_timeout {
   undef $self->{_keep_alive_waiting};
   $self->{handle}->destroy;
   $self->error(0, 'keep alive timeout');
+  $self->reconnect();
 }
 
 sub _keep_alive_received {
@@ -302,6 +307,7 @@ sub connect {
                                 message_type => MQTT_CONNECT,
                                 keep_alive_timer => $self->{keep_alive_timer},
                                 client_id => $self->{client_id},
+                                clean_session => $self->{clean_session},
                                 will_topic => $self->{will_topic},
                                 will_qos => $self->{will_qos},
                                 will_retain => $self->{will_retain},
@@ -316,6 +322,13 @@ sub connect {
                                            });
                           });
   return $cv
+}
+
+sub reconnect {
+  my $self = shift;
+  print STDERR "reconnecting:\n" if DEBUG;
+  $self->{clean_session} = 0;
+  $self->connect(@_);
 }
 
 sub _handle_message {
