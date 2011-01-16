@@ -21,8 +21,10 @@ package AnyEvent::MQTT;
 
 =head1 DESCRIPTION
 
-AnyEvent module for MQTT client.  THIS API IS AN EARLY RELEASE AND IS
-STILL SUBJECT TO SIGNIFICANT CHANGE.
+AnyEvent module for MQTT client.
+
+B<IMPORTANT:> This is an early release and the API is still subject to
+change.
 
 =cut
 
