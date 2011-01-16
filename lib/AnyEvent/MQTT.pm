@@ -26,6 +26,11 @@ AnyEvent module for MQTT client.
 B<IMPORTANT:> This is an early release and the API is still subject to
 change.
 
+=head1 DISCLAIMER
+
+This is B<not> official IBM code.  I work for IBM but I'm writing this
+in my spare time (with permission) for fun.
+
 =cut
 
 use constant DEBUG => $ENV{ANYEVENT_MQTT_DEBUG};
