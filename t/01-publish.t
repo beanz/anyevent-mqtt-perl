@@ -95,7 +95,7 @@ $mqtt->publish($fh => '/topic',
                                   my ($hdl, $fatal, $msg) = @_;
                                   # error on fh close as
                                   # readers are waiting
-                                $error->send($!);
+                                  $error->send($!);
                                   $hdl->destroy;
                                 }]);
 is($error->recv, 'Broken pipe', '... expected broken pipe');
@@ -118,5 +118,4 @@ $handle = AnyEvent::Handle->new(fh => $fh,
                                 });
 $mqtt->publish($handle => '/topic', push_read_args => ['line', "\0"]);
 is($error->recv, 'Broken pipe', '... expected broken pipe');
-is($published->recv, 3, '... file handle published complete');
-
+is($published->recv, 3, '... AnyEvent::Handle published complete');
