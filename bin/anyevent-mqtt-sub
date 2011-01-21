@@ -1,0 +1,125 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+# ABSTRACT: Perl script for subscribing to an MQTT topic
+# PODNAME: anyevent-mqtt-sub
+
+=head1 SYNOPSIS
+
+  anyevent-mqtt-sub [options] topic1 [topic2] [topic3] ...
+
+=head1 OPTIONS
+
+=over
+
+=item B<-help>
+
+Print a brief help message.
+
+=item B<-man>
+
+Print the manual page.
+
+=item B<-verbose>
+
+Include more verbose output.  Without this option the script only
+outputs errors and received messages one per line in the form:
+
+  topic message
+
+With one B<-verbose> options, publish messages are printed in a form
+of a summary of the header fields and the payload in hex dump and text
+form.
+
+With two B<-verbose> options, summaries are printed for all messages
+sent and received.
+
+=item B<-keepalive NNN>
+
+The keep alive timer value.  Defaults to 120 seconds.  For simplicity,
+it is also currently used as the connection/subscription timeout.
+
+=item B<-count NNN>
+
+Read the specificed number of MQTT messages and then exit.  Default
+is 0 - read forever.
+
+=item B<-one> or B<-1>
+
+Short for B<-count 1>.  Read one message and exit.
+
+=back
+
+=head1 DESCRIPTION
+
+This script subscribes to one or more MQTT topics and prints any
+messages that it receives to stdout.
+
+=cut
+
+use strict;
+use AnyEvent::MQTT;
+use Getopt::Long;
+use Pod::Usage;
+
+my $help;
+my $man;
+my $verbose = 0;
+my $host = '127.0.0.1';
+my $port = 1883;
+my $count;
+my $keep_alive_timer = 120;
+GetOptions('help|?' => \$help,
+           'man' => \$man,
+           'verbose+' => \$verbose,
+           'host=s' => \$host,
+           'port=i' => \$port,
+           'count=i' => \$count,
+           'one|1' => sub { $count = 1 },
+           'keepalive=i' => \$keep_alive_timer) or pod2usage(2);
+pod2usage(1) if ($help);
+pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+pod2usage(2) unless (@ARGV); # need a topic
+
+my $mqtt =
+  AnyEvent::MQTT->new(host => $host, port => $port,
+                      keep_alive_timer => $keep_alive_timer,
+                      on_error => sub {
+                        my ($fatal, $message) = @_;
+                        if ($fatal) {
+                          die $message, "\n";
+                        } else {
+                          warn $message, "\n";
+                        }
+                      });
+
+foreach my $topic (@ARGV) {
+  $mqtt->subscribe($topic => \&output);
+}
+
+my $condvar = AnyEvent->condvar;
+$condvar->recv();
+
+sub output {
+  my ($topic, $message, $obj) = @_;
+  if ($verbose == 0) {
+    print $topic, ' ', $message, "\n";
+  } else {
+    print $obj->string, "\n";
+  }
+  if (defined $count && --$count == 0) {
+    $condvar->send;
+  }
+}
+
+=head1 SEE ALSO
+
+AnyEvent::MQTT(3)
+
+=head1 DISCLAIMER
+
+This is B<not> official IBM code.  I work for IBM but I'm writing this
+in my spare time (with permission) for fun.
+
+=cut

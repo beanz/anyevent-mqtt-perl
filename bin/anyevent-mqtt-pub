@@ -1,0 +1,108 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+# ABSTRACT: Perl script for publishing to an MQTT topic
+# PODNAME: anyevent-mqtt-pub
+
+=head1 SYNOPSIS
+
+  # messages one per line on stdin
+  echo message | anyevent-mqtt-pub [options] topic
+
+  # message as command line arguments
+  anyevent-mqtt-pub [options] topic this is a message
+
+=head1 OPTIONS
+
+=over
+
+=item B<-help>
+
+Print a brief help message.
+
+=item B<-man>
+
+Print the manual page.
+
+=item B<-host>
+
+The host running the MQTT service.  The default is C<127.0.0.1>.
+
+=item B<-port>
+
+The port of the running MQTT service.  The default is 1883.
+
+=item B<-verbose>
+
+Include more verbose output.  Without this option the script only
+outputs errors
+
+=item B<-keepalive NNN>
+
+The keep alive timer value.  Defaults to 120 seconds.  For simplicity,
+it is also currently used as the connection timeout.
+
+=back
+
+=head1 DESCRIPTION
+
+This script publishes each line from stdin as an MQTT message on the
+given topic.
+
+=cut
+
+use strict;
+use AnyEvent::MQTT;
+use Getopt::Long;
+use Pod::Usage;
+
+my $help;
+my $man;
+my $verbose = 0;
+my $host = '127.0.0.1';
+my $port = 1883;
+my $keep_alive_timer = 120;
+GetOptions('help|?' => \$help,
+           'man' => \$man,
+           'verbose+' => \$verbose,
+           'host=s' => \$host,
+           'port=i' => \$port,
+           'keepalive=i' => \$keep_alive_timer) or pod2usage(2);
+pod2usage(1) if ($help);
+pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+my $topic = shift || pod2usage(2); # need a topic
+
+my $mqtt =
+  AnyEvent::MQTT->new(host => $host, port => $port,
+                      keep_alive_timer => $keep_alive_timer,
+                      on_error => sub {
+                        my ($fatal, $message) = @_;
+                        if ($fatal) {
+                          die $message, "\n";
+                        } else {
+                          warn $message, "\n";
+                        }
+                      });
+
+my $condvar;
+if (@ARGV) {
+  my $msg = join ' ', @ARGV;
+  $condvar = $mqtt->publish($msg => $topic);
+} else {
+  $condvar = AnyEvent->condvar;
+  $mqtt->publish(\*STDIN => $topic,
+                 handle_args => [ on_error => sub { $condvar->send } ]);
+}
+$condvar->recv;
+
+=head1 SEE ALSO
+
+AnyEvent::MQTT(3)
+
+=head1 DISCLAIMER
+
+This is B<not> official IBM code.  I work for IBM but I'm writing this
+in my spare time (with permission) for fun.
+
+=cut
