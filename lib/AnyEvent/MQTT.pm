@@ -114,7 +114,7 @@ sub new {
            will_message => '',
            client_id => undef,
            clean_session => 1,
-           connect_queue => [],
+           write_queue => [],
            %p,
           }, $pkg;
 }
@@ -138,7 +138,7 @@ sub cleanup {
   delete $self->{wait};
   delete $self->{_keep_alive_handle};
   delete $self->{_keep_alive_waiting};
-  $self->{connect_queue} = [];
+  $self->{write_queue} = [];
 }
 
 sub _error {
@@ -207,12 +207,11 @@ sub publish {
   unless (ref $data) {
     print STDERR "publish: simple[$data] => $topic\n" if DEBUG;
     my $mid = $self->{message_id}++;
-    $self->_send(message_type => MQTT_PUBLISH,
-                 qos => $qos,
-                 topic => $topic,
-                 message_id => $mid,
-                 message => $data);
-    return;
+    return $self->_send(message_type => MQTT_PUBLISH,
+                        qos => $qos,
+                        topic => $topic,
+                        message_id => $mid,
+                        message => $data);
   }
   my $handle;
   if ($data->isa('AnyEvent::Handle')) {
@@ -258,9 +257,9 @@ sub subscribe {
   my $mid = $self->_add_subscription($topic, $sub, $cv);
   if (defined $mid) { # not already subscribed/subscribing
     $qos = MQTT_QOS_AT_MOST_ONCE unless (defined $qos);
-    $self->_send(Net::MQTT::Message->new(message_type => MQTT_SUBSCRIBE,
-                                         message_id => $mid,
-                                         topics => [[$topic, $qos]]));
+    $self->_send(message_type => MQTT_SUBSCRIBE,
+                 message_id => $mid,
+                 topics => [[$topic, $qos]]);
   }
   $cv
 }
@@ -312,15 +311,38 @@ sub _confirm_subscription {
 
 sub _send {
   my $self = shift;
-  my $msg = ref $_[0] ? $_[0] : Net::MQTT::Message->new(@_);
-  $self->{connected} ? $self->_real_send($msg) : $self->connect($msg);
+  my %p = @_;
+  my $cv = delete $p{cv};
+  my $msg = Net::MQTT::Message->new(%p);
+  $self->{connected} ?
+    $self->_queue_write($msg, $cv) : $self->connect($msg, $cv);
 }
 
-sub _real_send {
-  my ($self, $msg) = @_;
-  print STDERR "Sending: ", $msg->string, "\n" if DEBUG;
+sub _queue_write {
+  my ($self, $msg, $cv) = @_;
+  my $queue = $self->{write_queue};
+  print STDERR 'Queuing: ', $msg->string, "\n" if DEBUG;
+  push @{$queue}, [$msg, $cv];
+  $self->_write_now unless (defined $self->{_waiting});
+  $cv;
+}
+
+
+sub _write_now {
+  my $self = shift;
+  my ($msg, $cv);
+  undef $self->{_waiting};
+  if (@_) {
+    ($msg, $cv) = @_;
+  } else {
+    my $args = shift @{$self->{write_queue}} || return;
+    ($msg, $cv) = @$args;
+  }
   $self->_reset_keep_alive_timer();
-  return $self->{handle}->push_write($msg->bytes);
+  print STDERR "Sending: ", $msg->string, "\n" if DEBUG;
+  $self->{_waiting} = [$msg, $cv];
+  $self->{handle}->push_write($msg->bytes);
+  $cv;
 }
 
 sub _reset_keep_alive_timer {
@@ -364,12 +386,17 @@ be necessary to call it directly.
 =cut
 
 sub connect {
-  my ($self, $msg) = @_;
+  my ($self, $msg, $cv) = @_;
+  print STDERR "connect\n" if DEBUG;
+  $self->{_waiting} = 'connect';
   if ($msg) {
-    push @{$self->{connect_queue}}, $msg;
+    $cv = AnyEvent->condvar unless ($cv);
+    $self->_queue_write($msg, $cv);
+  } else {
+    $self->{connect_cv} = AnyEvent->condvar unless (exists $self->{connect_cv});
+    $cv = $self->{connect_cv};
   }
-  return $self->{connect_cv} if ($self->{handle});
-  my $cv = $self->{connect_cv} = AnyEvent->condvar;
+  return $cv if ($self->{handle});
   my $hd;
   $hd = $self->{handle} =
     AnyEvent::Handle->new(connect => [$self->{host}, $self->{port}],
@@ -401,7 +428,7 @@ sub connect {
                                 will_retain => $self->{will_retain},
                                 will_message => $self->{will_message},
                               );
-                            $self->_real_send($msg);
+                            $self->_write_now($msg);
                             $hd->timeout($self->{timeout});
                             $self->{wait} = 'connack';
                             $hd->push_read(ref $self => sub {
@@ -426,13 +453,17 @@ sub _handle_message {
   if ($type == MQTT_CONNACK) {
     $handle->timeout(undef);
     print STDERR "Connection ready:\n", $msg->string('  '), "\n" if DEBUG;
-    while (@{$self->{connect_queue}}) {
-      my $msg = shift @{$self->{connect_queue}};
-      $self->_real_send($msg);
-    }
+    $self->_write_now();
     $self->{connected} = 1;
-    $self->{connect_cv}->send(1);
+    $self->{connect_cv}->send(1) if ($self->{connect_cv});
     delete $self->{connect_cv};
+    $handle->on_drain(sub {
+                        print STDERR "drained\n" if DEBUG;
+                        my $w = $self->{_waiting};
+                        $w->[1]->send(1) if (ref $w && defined $w->[1]);
+                        $self->_write_now;
+                        1;
+                      });
     return
   }
   if ($type == MQTT_PINGRESP) {
