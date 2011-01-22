@@ -211,7 +211,7 @@ sub publish {
   my $topic = exists $p{topic} ? $p{topic} :
     croak ref $self, '->publish requires "topic" parameter';
   my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
-  my $cv = delete $p{cv} || AnyEvent->condvar;
+  my $cv = exists $p{cv} ? delete $p{cv} : AnyEvent->condvar;
   my $message = $p{message};
   if (defined $message) {
     print STDERR "publish: message[$message] => $topic\n" if DEBUG;
@@ -292,10 +292,9 @@ sub subscribe {
   my $sub = exists $p{callback} ? $p{callback} :
     croak ref $self, '->subscribe requires "callback" parameter';
   my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
-  my $cv = delete $p{cv} || AnyEvent->condvar;
+  my $cv = exists $p{cv} ? delete $p{cv} : AnyEvent->condvar;
   my $mid = $self->_add_subscription($topic, $sub, $cv);
   if (defined $mid) { # not already subscribed/subscribing
-    $qos = MQTT_QOS_AT_MOST_ONCE unless (defined $qos);
     $self->_send(message_type => MQTT_SUBSCRIBE,
                  message_id => $mid,
                  topics => [[$topic, $qos]]);
@@ -374,7 +373,7 @@ sub _write_now {
   if (@_) {
     ($msg, $cv) = @_;
   } else {
-    my $args = shift @{$self->{write_queue}} || return;
+    my $args = shift @{$self->{write_queue}} or return;
     ($msg, $cv) = @$args;
   }
   $self->_reset_keep_alive_timer();
@@ -445,11 +444,8 @@ sub connect {
                             $handle->destroy;
                             $self->_error($fatal, $message, 0);
                           },
-                          on_eof => sub {
-                            print STDERR "handle eof\n" if DEBUG;
-                            $_[0]->destroy;
-                            $self->_error(0, 'Connection closed');
-                          },
+                          # on_eof => ... no eof as there is no QUIT so
+                          # there is always a waiting reader
                           on_timeout => sub {
                             $self->_error(0, $self->{wait}.' timeout', 1);
                             $self->{wait} = 'nothing';

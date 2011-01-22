@@ -46,19 +46,35 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 my ($host,$port) = @{$cv->recv};
 my $addr = join ':', $host, $port;
 
-plan tests => 5;
+plan tests => 10;
 
 use_ok('AnyEvent::MQTT');
 
-my $error;
 my $mqtt =
   AnyEvent::MQTT->new(host => $host, port => $port, client_id => 'acme_mqtt',
-                      on_error => sub { $error = [@_]; $cv->send(1) });
+                      on_error => sub { $cv->send(@_); });
 
-ok($mqtt, 'instantiate AnyEvent::MQTT object');
+ok($mqtt, 'instantiate AnyEvent::MQTT object for broken pipe test');
 $cv = $mqtt->connect();
-$cv->recv;
-is_deeply($error, [1, 'Broken pipe'], 'fatal error broken pipe');
+my ($fatal, $error) = $cv->recv;
+is($fatal, 1, '... fatal error');
+like($error, qr/^Broken pipe/, '... message');
+
+is(test_error(sub { $mqtt->subscribe }),
+   'AnyEvent::MQTT->subscribe requires "topic" parameter',
+   'subscribe w/o topic');
+
+is(test_error(sub { $mqtt->subscribe(topic => '/test') }),
+   'AnyEvent::MQTT->subscribe requires "callback" parameter',
+   'subscribe w/o callback');
+
+is(test_error(sub { $mqtt->publish }),
+   'AnyEvent::MQTT->publish requires "topic" parameter',
+   'publish w/o topic');
+
+is(test_error(sub { $mqtt->publish(topic => '/test') }),
+   'AnyEvent::MQTT->publish requires "message" or "handle" parameter',
+   'publish w/o message or handle');
 
 undef $error;
 $mqtt =
