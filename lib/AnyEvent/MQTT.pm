@@ -8,19 +8,27 @@ package AnyEvent::MQTT;
 
   use AnyEvent::MQTT;
   my $mqtt = AnyEvent::MQTT->new;
-  $mqtt->subscribe(topic => '/topic',
-                   callback => sub {
+  my $cv = $mqtt->subscribe(topic => '/topic',
+                            callback => sub {
                                  my ($topic, $message) = @_;
                                  print $topic, ' ', $message, "\n"
                                });
+  my $qos = $cv->recv; # subscribed, negotiated QoS == $qos
 
   # publish a simple message
-  $mqtt->publish(message => 'simple message',
-                 topic => '/topic');
+  my $cv = $mqtt->publish(message => 'simple message',
+                          topic => '/topic');
+  $cv->recv; # sent
 
   # publish line-by-line from file handle
-  $mqtt->publish(filehandle => \*STDIN,
-                 topic => '/topic');
+  $cv =  $mqtt->publish(handle => \*STDIN,
+                        topic => '/topic');
+  $cv->recv; # sent
+
+  # publish from AnyEvent::Handle
+  $cv = $mqtt->publish(handle => AnyEvent::Handle->new(...),
+                       topic => '/topic');
+  $cv->recv; # sent
 
 =head1 DESCRIPTION
 
