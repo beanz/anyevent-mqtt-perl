@@ -215,7 +215,7 @@ sub publish {
   my $message = $p{message};
   if (defined $message) {
     print STDERR "publish: message[$message] => $topic\n" if DEBUG;
-    my $mid = $self->{message_id}++;
+    my $mid = $self->{message_id}++ if ($qos);
     return $self->_send(message_type => MQTT_PUBLISH,
                         qos => $qos,
                         topic => $topic,
