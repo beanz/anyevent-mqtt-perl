@@ -8,16 +8,19 @@ package AnyEvent::MQTT;
 
   use AnyEvent::MQTT;
   my $mqtt = AnyEvent::MQTT->new;
-  $mqtt->subscribe('/topic' => sub {
+  $mqtt->subscribe(topic => '/topic',
+                   callback => sub {
                                  my ($topic, $message) = @_;
                                  print $topic, ' ', $message, "\n"
                                });
 
   # publish a simple message
-  $mqtt->publish('simple message' => '/topic');
+  $mqtt->publish(message => 'simple message',
+                 topic => '/topic');
 
   # publish line-by-line from file handle
-  $mqtt->publish(\*STDIN => '/topic');
+  $mqtt->publish(filehandle => \*STDIN,
+                 topic => '/topic');
 
 =head1 DESCRIPTION
 
@@ -148,35 +151,29 @@ sub _error {
   $self->_reconnect() if ($reconnect);
 }
 
-=method C<publish( $data, $topic, %parameters )>
+=method C<publish( %parameters )>
 
-This method is used to publish to a given topic.  The data may be
-either:
+This method is used to publish to a given topic.  It returns an
+L<AnyEvent::condvar> which is notified when the publish is complete
+(written to the kernel or ack'd depending on the QoS level).  The
+parameter hash must included at least a B<topic> value and one of:
 
 =over
 
-=item a string
+=item B<message>
 
-  in which case the string is published to the topic,
+  with a string value which is published to the topic,
 
-=item an L<AnyEvent::Handle>
+=item B<handle>
 
-  in which case the L<push_read()> method is called on it with a
-  callback that will publish each chunk read to the topic, or
-
-=item anything else
-
-  in which case it will be passed as the C<fh> parameter in the
-  construction of an L<AnyEvent::Handle> and treated as described
-  above.
+ the value of which must either be an L<AnyEvent::Handle> or will be
+ passed to an L<AnyEvent::Handle> constructor as the C<fh> argument.
+ The L<push_read()> method is called on the L<AnyEvent::Handle> with a
+ callback that will publish each chunk read to the topic.
 
 =back
 
-In the first case, undef is returned.  In the other cases, the
-used L<AnyEvent::Handle> object is returned and may be destroyed
-to prevent further publishing.
-
-The parameter hash may contain keys for:
+The parameter hash may also keys for:
 
 =over
 
@@ -202,26 +199,28 @@ The parameter hash may contain keys for:
 =cut
 
 sub publish {
-  my ($self, $data, $topic, %p) = @_;
+  my ($self, %p) = @_;
+  my $topic = exists $p{topic} ? $p{topic} :
+    croak ref $self, '->publish requires "topic" parameter';
   my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
   my $cv = delete $p{cv} || AnyEvent->condvar;
-  unless (ref $data) {
-    print STDERR "publish: simple[$data] => $topic\n" if DEBUG;
+  my $message = $p{message};
+  if (defined $message) {
+    print STDERR "publish: message[$message] => $topic\n" if DEBUG;
     my $mid = $self->{message_id}++;
     return $self->_send(message_type => MQTT_PUBLISH,
                         qos => $qos,
                         topic => $topic,
                         message_id => $mid,
-                        message => $data,
+                        message => $message,
                         cv => $cv);
   }
-  my $handle;
-  if ($data->isa('AnyEvent::Handle')) {
-    $handle = $data;
-  } else {
+  my $handle = exists $p{handle} ? $p{handle} :
+    croak ref $self, '->publish requires "message" or "handle" parameter';
+  unless ($handle->isa('AnyEvent::Handle')) {
     my @args = @{$p{handle_args}||[]};
-    print STDERR "publish: IO[$data] => $topic @args\n" if DEBUG;
-    $handle = AnyEvent::Handle->new(fh => $data, @args);
+    print STDERR "publish: IO[$handle] => $topic @args\n" if DEBUG;
+    $handle = AnyEvent::Handle->new(fh => $handle, @args);
   }
   my $error_sub = $handle->{on_error}; # Hack: There is no accessor api
   $handle->on_error(sub {

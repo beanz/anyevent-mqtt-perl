@@ -86,14 +86,13 @@ my $mqtt =
                       });
 
 my $condvar;
+my %args = ( topic => $topic );
 if (@ARGV) {
-  my $msg = join ' ', @ARGV;
-  $condvar = $mqtt->publish($msg => $topic);
+  $args{message} = join ' ', @ARGV;
 } else {
-  $condvar = AnyEvent->condvar;
-  $mqtt->publish(\*STDIN => $topic,
-                 handle_args => [ on_error => sub { $condvar->send } ]);
+  $args{handle} = \*STDIN,
 }
+$condvar = $mqtt->publish(%args);
 $condvar->recv;
 
 =head1 SEE ALSO
