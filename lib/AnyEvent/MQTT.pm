@@ -204,6 +204,7 @@ The parameter hash may contain keys for:
 sub publish {
   my ($self, $data, $topic, %p) = @_;
   my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
+  my $cv = delete $p{cv} || AnyEvent->condvar;
   unless (ref $data) {
     print STDERR "publish: simple[$data] => $topic\n" if DEBUG;
     my $mid = $self->{message_id}++;
@@ -211,7 +212,8 @@ sub publish {
                         qos => $qos,
                         topic => $topic,
                         message_id => $mid,
-                        message => $data);
+                        message => $data,
+                        cv => $cv);
   }
   my $handle;
   if ($data->isa('AnyEvent::Handle')) {
@@ -221,6 +223,13 @@ sub publish {
     print STDERR "publish: IO[$data] => $topic @args\n" if DEBUG;
     $handle = AnyEvent::Handle->new(fh => $data, @args);
   }
+  my $error_sub = $handle->{on_error}; # Hack: There is no accessor api
+  $handle->on_error(sub {
+                      $error_sub->(@_) if ($error_sub);
+                      $handle->destroy;
+                      undef $handle;
+                      $cv->send(1);
+                    });
   my @push_read_args = @{$p{push_read_args}||['line']};
   my $sub; $sub = sub {
     my ($hdl, $chunk, @args) = @_;
@@ -235,7 +244,7 @@ sub publish {
     return;
   };
   $handle->push_read(@push_read_args => $sub);
-  return $handle;
+  return $cv;
 }
 
 =method C<subscribe( $topic => $sub, [$qos, [$condvar]] )>

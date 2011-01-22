@@ -8,6 +8,7 @@ use constant {
 };
 use File::Temp qw/tempfile/;
 use Net::MQTT::Constants;
+use Errno qw/EPIPE/;
 
 $|=1;
 
@@ -68,7 +69,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 my ($host,$port) = @{$cv->recv};
 my $addr = join ':', $host, $port;
 
-plan tests => 11;
+plan tests => 13;
 
 use_ok('AnyEvent::MQTT');
 
@@ -88,34 +89,37 @@ syswrite $fh, "message2\n";
 sysseek $fh, 0, 0;
 
 $published = AnyEvent->condvar;
-$error = AnyEvent->condvar;
-$mqtt->publish($fh => '/topic',
-               qos => MQTT_QOS_AT_MOST_ONCE,
-               handle_args => [ on_error => sub {
-                                  my ($hdl, $fatal, $msg) = @_;
-                                  # error on fh close as
-                                  # readers are waiting
-                                  $error->send($!);
-                                  $hdl->destroy;
-                                }]);
-is($error->recv, 'Broken pipe', '... expected broken pipe');
-is($published->recv, 2, '... file handle published complete');
+my $eof = AnyEvent->condvar;
+my $pcv =
+  $mqtt->publish($fh => '/topic',
+                 qos => MQTT_QOS_AT_MOST_ONCE,
+                 handle_args => [ on_error => sub {
+                                    my ($hdl, $fatal, $msg) = @_;
+                                    # error on fh close as
+                                    # readers are waiting
+                                    $eof->send($!{EPIPE});
+                                    $hdl->destroy;
+                                  }]);
+ok($pcv, 'publish file handle');
+ok($eof->recv, '... expected broken pipe');
+is($published->recv, 2, '... published complete');
 
 sysseek $fh, 0, 0;
 syswrite $fh, "message3\0";
 sysseek $fh, 0, 0;
 
 $published = AnyEvent->condvar;
-$error = AnyEvent->condvar;
+$eof = AnyEvent->condvar;
 my $handle;
 $handle = AnyEvent::Handle->new(fh => $fh,
                                 on_error => sub {
                                   my ($hdl, $fatal, $msg) = @_;
                                   # error on fh close as
                                   # readers are waiting
-                                  $error->send($!);
+                                  $eof->send($!{EPIPE});
                                   $hdl->destroy;
                                 });
-$mqtt->publish($handle => '/topic', push_read_args => ['line', "\0"]);
-is($error->recv, 'Broken pipe', '... expected broken pipe');
-is($published->recv, 3, '... AnyEvent::Handle published complete');
+$pcv = $mqtt->publish($handle => '/topic', push_read_args => ['line', "\0"]);
+ok($pcv, 'publish AnyEvent::Handle');
+ok($eof->recv, '... expected broken pipe');
+is($published->recv, 3, '... published complete');
