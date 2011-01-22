@@ -95,7 +95,7 @@ my $mqtt =
                       });
 
 foreach my $topic (@ARGV) {
-  $mqtt->subscribe($topic => \&output);
+  $mqtt->subscribe(topic => $topic, callback => \&output);
 }
 
 my $condvar = AnyEvent->condvar;
