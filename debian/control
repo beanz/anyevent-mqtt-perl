@@ -11,6 +11,5 @@ Package: libanyevent-mqtt-perl
 Architecture: all
 Depends: ${perl:Depends}, ${misc:Depends}, libnet-mqtt-perl
 Description: AnyEvent::MQTT Perl modules for MQTT protocol with AnyEvent
-Description: Net::MQTT Perl modules for MQTT Protocol (http://mqtt.org/)
  AnyEvent modules for working with the MQTT protocol described at
  L<http://mqtt.org>.
