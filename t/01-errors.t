@@ -7,6 +7,7 @@ use constant {
   DEBUG => $ENV{ANYEVENT_MQTT_TEST_DEBUG}
 };
 use Net::MQTT::Constants;
+use Errno qw/EPIPE/;
 
 $|=1;
 
@@ -46,19 +47,20 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 my ($host,$port) = @{$cv->recv};
 my $addr = join ':', $host, $port;
 
-plan tests => 10;
+plan tests => 11;
 
 use_ok('AnyEvent::MQTT');
 
 my $mqtt =
   AnyEvent::MQTT->new(host => $host, port => $port, client_id => 'acme_mqtt',
-                      on_error => sub { $cv->send(@_); });
+                      on_error => sub { $cv->send($!{EPIPE}, @_); });
 
 ok($mqtt, 'instantiate AnyEvent::MQTT object for broken pipe test');
 $cv = $mqtt->connect();
-my ($fatal, $error) = $cv->recv;
+my ($is_broken_pipe, $fatal, $error) = $cv->recv;
+ok($is_broken_pipe, '... broken pipe errno');
 is($fatal, 1, '... fatal error');
-like($error, qr/^Broken pipe/, '... message');
+like($error, qr/^Error: /, '... message');
 
 is(test_error(sub { $mqtt->subscribe }),
    'AnyEvent::MQTT->subscribe requires "topic" parameter',

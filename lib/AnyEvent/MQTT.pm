@@ -442,7 +442,7 @@ sub connect {
                             my ($handle, $fatal, $message) = @_;
                             print STDERR "handle error $_[1]\n" if DEBUG;
                             $handle->destroy;
-                            $self->_error($fatal, $message, 0);
+                            $self->_error($fatal, 'Error: '.$message, 0);
                           },
                           # on_eof => ... no eof as there is no QUIT so
                           # there is always a waiting reader
