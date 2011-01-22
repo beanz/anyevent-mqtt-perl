@@ -1,4 +1,6 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+
+1.110220  2011-01-22 15:29:52 Europe/London
     - Initial release.
