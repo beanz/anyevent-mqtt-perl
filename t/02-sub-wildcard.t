@@ -79,30 +79,30 @@ ok($mqtt, 'instantiate AnyEvent::MQTT object');
 
 my %c;
 my $t1_cv = AnyEvent->condvar;
-my $t1_sub = $mqtt->subscribe('/t/+',
-                            sub {
-                              my ($topic, $message) = @_;
-                              $c{t1}++;
-                              $t1_cv->send($topic.' '.$message);
-                            });
+my $t1_sub = $mqtt->subscribe(topic => '/t/+',
+                              callback => sub {
+                                my ($topic, $message) = @_;
+                                $c{t1}++;
+                                $t1_cv->send($topic.' '.$message);
+                              });
 
 my $t2_cv = AnyEvent->condvar;
-my $t2_sub = $mqtt->subscribe('/t/#',
-                            sub {
-                              my ($topic, $message) = @_;
-                              $c{t2}++;
-                              $t2_cv->send($topic.' '.$message);
-                            },
-                            MQTT_QOS_AT_MOST_ONCE,
-                           );
+my $t2_sub = $mqtt->subscribe(topic => '/t/#',
+                              callback => sub {
+                                my ($topic, $message) = @_;
+                                $c{t2}++;
+                                $t2_cv->send($topic.' '.$message);
+                              },
+                              qos => MQTT_QOS_AT_MOST_ONCE,
+                             );
 
 my $t3_cv = AnyEvent->condvar;
-my $t3_sub = $mqtt->subscribe('/t/+/s',
-                            sub {
-                              my ($topic, $message) = @_;
-                              $c{t3}++;
-                              $t3_cv->send($topic.' '.$message);
-                            });
+my $t3_sub = $mqtt->subscribe(topic => '/t/+/s',
+                              callback => sub {
+                                my ($topic, $message) = @_;
+                                $c{t3}++;
+                                $t3_cv->send($topic.' '.$message);
+                              });
 
 is($t1_sub->recv, 0, '... subscribe /t/+ complete');
 is($t2_sub->recv, 0, '... subscribe /t/# complete');

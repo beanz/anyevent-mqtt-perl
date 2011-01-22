@@ -254,22 +254,45 @@ sub publish {
   return $cv;
 }
 
-=method C<subscribe( $topic => $sub, [$qos, [$condvar]] )>
+=method C<subscribe( %parameters )>
 
-This method is subscribes to the given topic.  The optional QoS
-parameter can be used to request a particular QoS (the default is
-MQTT_QOS_AT_MOST_ONCE).
+This method is subscribes to the given topic.  The parameter hash
+may contain values for the following keys:
 
-This method returns an L<AnyEvent> condvar that will be sent the
-negotiated QoS when the subscription is acknowledged.  The optional
-condvar parameter may be used to supply a condvar for this purpose
-otherwise one will be created.
+=over
+
+=item B<topic>
+
+  for the topic to subscribe to (this is required),
+
+=item B<callback>
+
+  for the callback to call with messages (this is required),
+
+=item B<qos>
+
+  QoS level to use (default is MQTT_QOS_AT_MOST_ONCE),
+
+=item B<cv>
+
+  L<AnyEvent> condvar to use to signal the subscription is complete.
+  The received value will be the negotiated QoS level.
+
+=back
+
+This method returns the value of the B<cv> parameter if it was
+supplied or an L<AnyEvent> condvar created for this purpose.
 
 =cut
 
 sub subscribe {
-  my ($self, $topic, $sub, $qos, $cv) = @_;
-  $cv = AnyEvent->condvar unless (defined $cv);
+  my ($self, %p) = @_;
+  my $topic = exists $p{topic} ? $p{topic} :
+    croak ref $self, '->subscribe requires "topic" parameter';
+  my $sub = exists $p{callback} ? $p{callback} :
+    croak ref $self, '->subscribe requires "callback" parameter';
+  my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
+  my $cv = delete $p{cv} || AnyEvent->condvar;
   my $mid = $self->_add_subscription($topic, $sub, $cv);
   if (defined $mid) { # not already subscribed/subscribing
     $qos = MQTT_QOS_AT_MOST_ONCE unless (defined $qos);

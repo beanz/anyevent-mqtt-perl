@@ -101,10 +101,10 @@ is_deeply([$cv->recv], [0, 'keep alive timeout'],
 
 $mqtt->{keep_alive_timer} = 120; # hack keep alive timer back to default
 $cv = AnyEvent->condvar;
-my $sub_cv = $mqtt->subscribe('/t1',
-                            sub {
-                              my ($topic, $message) = @_;
-                              $cv->send($topic.' '.$message);
-                            });
+my $sub_cv = $mqtt->subscribe(topic => '/t1',
+                              callback => sub {
+                                my ($topic, $message) = @_;
+                                $cv->send($topic.' '.$message);
+                              });
 is($sub_cv->recv, 0, 'subscribe after reconnect');
 is($cv->recv, '/t1 message1', '... received message');

@@ -80,10 +80,10 @@ my $common_sub =
     $call_count++;
     $cv->send($topic.' '.$message);
   };
-my $t1_sub = $mqtt->subscribe('/t/+' => $common_sub);
-my $t2_sub = $mqtt->subscribe('/t/#' => $common_sub);
-my $t3_sub = $mqtt->subscribe('/t/a' => $common_sub);
-my $t4_sub = $mqtt->subscribe('/t/a' => $common_sub);
+my $t1_sub = $mqtt->subscribe(topic => '/t/+', callback => $common_sub);
+my $t2_sub = $mqtt->subscribe(topic => '/t/#', callback => $common_sub);
+my $t3_sub = $mqtt->subscribe(topic => '/t/a' =>, callback => $common_sub);
+my $t4_sub = $mqtt->subscribe(topic => '/t/a' =>, callback => $common_sub);
 is($t1_sub->recv, 0, '... subscribe /t/+ complete');
 is($t2_sub->recv, 0, '... subscribe /t/# complete');
 is($t3_sub->recv, 0, '... subscribe /t/a complete');

@@ -99,27 +99,27 @@ my $mqtt = AnyEvent::MQTT->new(host => $host, port => $port,
 ok($mqtt, 'instantiate AnyEvent::MQTT object');
 
 my $t1_cv = AnyEvent->condvar;
-my $t1_sub = $mqtt->subscribe('/t1',
-                            sub {
-                              my ($topic, $message) = @_;
-                              $t1_cv->send($topic.' '.$message);
-                            });
+my $t1_sub = $mqtt->subscribe(topic => '/t1',
+                              callback => sub {
+                                my ($topic, $message) = @_;
+                                $t1_cv->send($topic.' '.$message);
+                              });
 
 my $t2_cv = AnyEvent->condvar;
-my $t2_sub = $mqtt->subscribe('/t2',
-                            sub {
-                              my ($topic, $message) = @_;
-                              $t2_cv->send($topic.' '.$message);
-                            },
-                            MQTT_QOS_AT_MOST_ONCE,
-                           );
+my $t2_sub = $mqtt->subscribe(topic => '/t2',
+                              callback => sub {
+                                my ($topic, $message) = @_;
+                                $t2_cv->send($topic.' '.$message);
+                              },
+                              qos => MQTT_QOS_AT_MOST_ONCE,
+                             );
 
 my $t2_dup_cv = AnyEvent->condvar;
-my $t2_dup_sub = $mqtt->subscribe('/t2',
-                            sub {
-                              my ($topic, $message) = @_;
-                              $t2_dup_cv->send($topic.' '.$message);
-                            });
+my $t2_dup_sub = $mqtt->subscribe(topic => '/t2',
+                                  callback => sub {
+                                    my ($topic, $message) = @_;
+                                    $t2_dup_cv->send($topic.' '.$message);
+                                  });
 
 is($t1_sub->recv, 0, '... subscribe /t1 complete');
 is($t2_sub->recv, 0, '... subscribe /t2 complete');
@@ -129,12 +129,12 @@ is($t1_cv->recv, '/t1 message1', '... /t1 message1');
 $t1_cv = AnyEvent->condvar;
 my $t1_dup_cv = AnyEvent->condvar;
 my $t1_dup_sub = AnyEvent->condvar;
-$mqtt->subscribe('/t1',
-               sub {
-                 my ($topic, $message) = @_;
-                 $t1_dup_cv->send($topic.' '.$message);
-               },
-               MQTT_QOS_AT_MOST_ONCE, $t1_dup_sub);
+$mqtt->subscribe(topic => '/t1',
+                 callback => sub {
+                   my ($topic, $message) = @_;
+                   $t1_dup_cv->send($topic.' '.$message);
+                 },
+                 qos => MQTT_QOS_AT_MOST_ONCE, cv => $t1_dup_sub);
 
 is($t1_dup_sub->recv, 0, '... subscribe /t1 dup complete');
 $mqtt->_send(message_type => MQTT_PINGREQ); # ping to trigger server to cont.

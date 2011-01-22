@@ -79,7 +79,7 @@ my $mqtt = AnyEvent::MQTT->new(host => $host, port => $port,
 ok($mqtt, 'instantiate AnyEvent::MQTT object');
 
 $published = AnyEvent->condvar;
-my $cv = $mqtt->publish(message => 'message', topic => '/topic');
+$cv = $mqtt->publish(message => 'message', topic => '/topic');
 ok($cv, 'simple message publish');
 is($cv->recv, 1, '... client complete');
 is($published->recv, 1, '... server complete');
