@@ -482,60 +482,73 @@ sub _reconnect {
 }
 
 sub _handle_message {
-  my ($self, $handle, $msg, $error) = @_;
+  my $self = shift;
+  my ($handle, $msg, $error) = @_;
   return $self->_error(0, $error, 1) if ($error);
-  my $type = $msg->message_type;
-  if ($type == MQTT_CONNACK) {
-    $handle->timeout(undef);
-    print STDERR "Connection ready:\n", $msg->string('  '), "\n" if DEBUG;
-    $self->_write_now();
-    $self->{connected} = 1;
-    $self->{connect_cv}->send(1) if ($self->{connect_cv});
-    delete $self->{connect_cv};
-    $handle->on_drain(sub {
-                        print STDERR "drained\n" if DEBUG;
-                        my $w = $self->{_waiting};
-                        $w->[1]->send(1) if (ref $w && defined $w->[1]);
-                        $self->_write_now;
-                        1;
-                      });
-    return
+  my $method = lc ref $msg;
+  $method =~ s/.*::/_process_/;
+  unless ($self->can($method)) {
+    carp 'Unsupported message ', $msg->string(), "\n";
+    return;
   }
-  if ($type == MQTT_PINGRESP) {
-    return $self->_keep_alive_received();
-  }
-  if ($type == MQTT_SUBACK) {
-    print STDERR "Confirmed subscription:\n", $msg->string('  '), "\n" if DEBUG;
-    $self->_confirm_subscription($msg->message_id, $msg->qos_levels->[0]);
-    return
-  }
-  if ($type == MQTT_PUBLISH) {
-    # TODO: handle puback, etc
-    my $msg_topic = $msg->topic;
-    my $msg_data = $msg->message;
-    my $rec = $self->{_sub}->{$msg_topic};
-    my %matched;
-    if ($rec) {
-      foreach my $cb (@{$rec->{cb}}) {
-        next if ($matched{$cb}++);
-        $cb->($msg_topic, $msg_data, $msg);
-      }
+  $self->$method(@_);
+}
+
+sub _process_connack {
+  my ($self, $handle, $msg, $error) = @_;
+  $handle->timeout(undef);
+  print STDERR "Connection ready:\n", $msg->string('  '), "\n" if DEBUG;
+  $self->_write_now();
+  $self->{connected} = 1;
+  $self->{connect_cv}->send(1) if ($self->{connect_cv});
+  delete $self->{connect_cv};
+  $handle->on_drain(sub {
+                      print STDERR "drained\n" if DEBUG;
+                      my $w = $self->{_waiting};
+                      $w->[1]->send(1) if (ref $w && defined $w->[1]);
+                      $self->_write_now;
+                      1;
+                    });
+  return
+}
+
+sub _process_pingresp {
+  shift->_keep_alive_received();
+}
+
+sub _process_suback {
+  my ($self, $handle, $msg, $error) = @_;
+  print STDERR "Confirmed subscription:\n", $msg->string('  '), "\n" if DEBUG;
+  $self->_confirm_subscription($msg->message_id, $msg->qos_levels->[0]);
+  return
+}
+
+sub _process_publish {
+  my ($self, $handle, $msg, $error) = @_;
+  # TODO: handle puback, etc
+  my $msg_topic = $msg->topic;
+  my $msg_data = $msg->message;
+  my $rec = $self->{_sub}->{$msg_topic};
+  my %matched;
+  if ($rec) {
+    foreach my $cb (@{$rec->{cb}}) {
+      next if ($matched{$cb}++);
+      $cb->($msg_topic, $msg_data, $msg);
     }
-    foreach my $topic (keys %{$self->{_subre}}) {
-      $rec = $self->{_subre}->{$topic};
-      my $re = $rec->{re};
-      next unless ($msg_topic =~ $re);
-      foreach my $cb (@{$rec->{cb}}) {
-        next if ($matched{$cb}++);
-        $cb->($msg_topic, $msg_data, $msg);
-      }
-    }
-    unless (scalar keys %matched) {
-      carp "Unexpected publish:\n", $msg->string('  '), "\n";
-    }
-    return
   }
-  print STDERR $msg->string(), "\n";
+  foreach my $topic (keys %{$self->{_subre}}) {
+    $rec = $self->{_subre}->{$topic};
+    my $re = $rec->{re};
+    next unless ($msg_topic =~ $re);
+    foreach my $cb (@{$rec->{cb}}) {
+      next if ($matched{$cb}++);
+      $cb->($msg_topic, $msg_data, $msg);
+    }
+  }
+  unless (scalar keys %matched) {
+    carp "Unexpected publish:\n", $msg->string('  '), "\n";
+  }
+  return
 }
 
 =method C<anyevent_read_type()>
