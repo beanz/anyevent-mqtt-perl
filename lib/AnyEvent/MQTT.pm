@@ -126,6 +126,7 @@ sub new {
            client_id => undef,
            clean_session => 1,
            write_queue => [],
+           ack => {},
            %p,
           }, $pkg;
 }
@@ -395,7 +396,6 @@ sub _queue_write {
   $cv;
 }
 
-
 sub _write_now {
   my $self = shift;
   my ($msg, $cv);
@@ -528,6 +528,9 @@ sub _handle_message {
 sub _process_connack {
   my ($self, $handle, $msg, $error) = @_;
   $handle->timeout(undef);
+  unless ($msg->return_code == MQTT_CONNECT_ACCEPTED) {
+    return $self->_error(1, 'Connection refused: '.$msg->string, 0);
+  }
   print STDERR "Connection ready:\n", $msg->string('  '), "\n" if DEBUG;
   $self->_write_now();
   $self->{connected} = 1;
