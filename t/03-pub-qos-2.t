@@ -36,41 +36,19 @@ my @connections =
      send => '20 02 00 00',
     },
     {
-     desc => q{publish},
-     recv => '32 12
+     desc => q{publish -> pubrec},
+     recv => '34 12
               00 06 2F 74 6F 70 69 63 00 01
               6D 65 73 73 61 67 65 31',
-     send => '40 02 00 01',
+     send => '50 02 00 01',
     },
     {
-     desc => q{puback},
-     send => sub { $published->send(1) },
+     desc => q{pubrel -> pubcomp},
+     recv => '62 02 00 01',
+     send => '70 02 00 01',
     },
     {
-     desc => q{publish},
-     recv => '32 12
-              00 06 2F 74 6F 70 69 63 00 02
-              6D 65 73 73 61 67 65 32',
-     send => '',
-    },
-    {
-     desc => q{keepalive},
-     recv => 'C0 00',
-     send => 'D0 00',
-    },
-    {
-     desc => q{publish},
-     recv => '3A 12
-              00 06 2F 74 6F 70 69 63 00 02
-              6D 65 73 73 61 67 65 32',
-     send => '50 02 00 02', # pubrec
-    },
-    {
-     desc => q{puback},
-     send => '40 02 00 02',
-    },
-    {
-     desc => q{pubrec},
+     desc => q{publish complete},
      send => sub { $published->send(1) },
     },
    ],
@@ -84,7 +62,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 my ($host,$port) = @{$cv->recv};
 my $addr = join ':', $host, $port;
 
-plan tests => 14;
+plan tests => 8;
 
 use_ok('AnyEvent::MQTT');
 
@@ -95,20 +73,7 @@ ok($mqtt, 'instantiate AnyEvent::MQTT object');
 
 $published = AnyEvent->condvar;
 $cv = $mqtt->publish(message => 'message1', topic => '/topic',
-                     qos => MQTT_QOS_AT_LEAST_ONCE);
-ok($cv, 'simple message publish');
+                     qos => MQTT_QOS_EXACTLY_ONCE);
+ok($cv, 'message publish with qos 2');
 is($cv->recv, 1, '... client complete');
-is($published->recv, 1, '... server complete');
-
-$mqtt->{keep_alive_timer} = 0.1;
-$published = AnyEvent->condvar;
-$cv = $mqtt->publish(message => 'message2', topic => '/topic',
-                     qos => MQTT_QOS_AT_LEAST_ONCE);
-$mqtt->{keep_alive_timer} = 120;
-ok($cv, 'message publish timeout and re-publish');
-my $res;
-is(test_warn(sub { $res = $cv->recv }),
-   'Received PubRec but expected PubAck for message id 2',
-   '... unexpected pubrec');
-is($res, 1, '... client complete');
 is($published->recv, 1, '... server complete');

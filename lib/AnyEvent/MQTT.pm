@@ -126,7 +126,7 @@ sub new {
            client_id => undef,
            clean_session => 1,
            write_queue => [],
-           ack => {},
+           inflight => {},
            %p,
           }, $pkg;
 }
@@ -213,9 +213,17 @@ sub publish {
     croak ref $self, '->publish requires "topic" parameter';
   my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
   my $cv = exists $p{cv} ? delete $p{cv} : AnyEvent->condvar;
+  my $expect =
+    ($qos == MQTT_QOS_AT_LEAST_ONCE ? MQTT_PUBACK : MQTT_PUBREC) if ($qos);
   my $message = $p{message};
   if (defined $message) {
-    $self->_publish($topic, $message, $qos, $cv);
+    print STDERR "publish: message[$message] => $topic\n" if DEBUG;
+    $self->_send_with_ack({
+                           message_type => MQTT_PUBLISH,
+                           qos => $qos,
+                           topic => $topic,
+                           message => $message,
+                          }, $cv, $expect);
     return $cv;
   }
   my $handle = exists $p{handle} ? $p{handle} :
@@ -237,7 +245,13 @@ sub publish {
     my ($hdl, $chunk, @args) = @_;
     print STDERR "publish: $chunk => $topic\n" if DEBUG;
     my $send_cv = AnyEvent->condvar;
-    $self->_publish($topic, $chunk, $qos, $send_cv);
+    print STDERR "publish: message[$chunk] => $topic\n" if DEBUG;
+    $self->_send_with_ack({
+                           message_type => MQTT_PUBLISH,
+                           qos => $qos,
+                           topic => $topic,
+                           message => $chunk,
+                          }, $send_cv, $expect);
     $send_cv->cb(sub { $handle->push_read(@push_read_args => $sub ) });
     return;
   };
@@ -245,44 +259,37 @@ sub publish {
   return $cv;
 }
 
-sub _publish {
-  my ($self, $topic, $message, $qos, $cv, $mid, $dup) = @_;
-  print STDERR "publish: message[$message] => $topic\n" if DEBUG;
-  my %args =
-    (
-     message_type => MQTT_PUBLISH,
-     qos => $qos,
-     topic => $topic,
-     message => $message,
-     cv => $cv,
-    );
-  if ($qos) {
-    $mid = $self->{message_id}++ unless (defined $mid);
-    $args{message_id} = $mid;
-    my $save = $qos == MQTT_QOS_AT_LEAST_ONCE ? 'puback' : 'pubrec';
+sub _send_with_ack {
+  my ($self, $args, $cv, $expect, $dup) = @_;
+  if ($args->{qos}) {
+    unless (exists $args->{message_id}) {
+      $args->{message_id} = $self->{message_id}++;
+    }
+    my $mid = $args->{message_id};
     my $send_cv = AnyEvent->condvar;
     $send_cv->cb(sub {
-                   $self->{$save}->{$mid} =
+                   $self->{inflight}->{$mid} =
                      {
-                      message => \%args,
+                      expect => $expect,
+                      message => $args,
                       cv => $cv,
+                      timeout =>
+                        AnyEvent->timer(after => $self->{keep_alive_timer},
+                                        cb => sub {
+                                          print ref $self, "->publish timeout\n"
+                                            if DEBUG;
+                                          delete $self->{inflight}->{$mid};
+                                          $self->_send_with_ack($args, $cv,
+                                                                $expect, 1);
+                                        }),
                      };
-                   $args{timeout} =
-                     AnyEvent->timer(after => $self->{keep_alive_timer},
-                                     cb => sub {
-                                       print ref $self, "->publish timeout\n"
-                                         if DEBUG;
-                                       delete $self->{$save}->{$mid};
-                                       $self->_publish($topic, $message,
-                                                       $qos, $cv, $mid, 1);
-                                     })
                    });
-    $args{cv} = $send_cv;
+    $args->{cv} = $send_cv;
   } else {
-    $args{cv} = $cv;
+    $args->{cv} = $cv;
   }
-  $args{dup} = 1 if ($dup);
-  return $self->_send(%args);
+  $args->{dup} = 1 if ($dup);
+  return $self->_send(%$args);
 }
 
 =method C<subscribe( %parameters )>
@@ -360,7 +367,7 @@ sub _confirm_subscription {
   my ($self, $mid, $qos) = @_;
   my $topic = delete $self->{_sub_pending_by_message_id}->{$mid};
   unless (defined $topic) {
-    carp "Got SubAck with no pending subscription for message id: $mid\n";
+    carp 'SubAck with no pending subscription for message id: ', $mid, "\n";
     return;
   }
   my $re = topic_to_regexp($topic); # convert MQTT pattern to regexp
@@ -582,21 +589,55 @@ sub _process_publish {
     carp "Unexpected publish:\n", $msg->string('  '), "\n";
   }
 
-  $self->_send(message_type => MQTT_PUBACK, message_id => $msg->message_id)
-    if ($msg->qos == MQTT_QOS_AT_LEAST_ONCE);
+  #$self->_send(message_type => MQTT_PUBACK, message_id => $msg->message_id)
+  #  if ($msg->qos == MQTT_QOS_AT_LEAST_ONCE);
 
   return
 }
 
-sub _process_puback {
-  my ($self, $handle, $msg, $error) = @_;
+sub _inflight_record {
+  my ($self, $msg) = @_;
   my $mid = $msg->message_id;
-  my $rec = delete $self->{puback}->{$mid};
-  unless (defined $rec) {
-    carp "Got PubAck with no pending pub for message id: $mid\n";
+  unless (exists $self->{inflight}->{$mid}) {
+    carp "Unexpected message for message id $mid\n  ".$msg->string;
     return;
   }
+  my $exp_type = $self->{inflight}->{$mid}->{expect};
+  my $got_type = $msg->message_type;
+  unless ($got_type == $exp_type) {
+    carp 'Received ', message_type_string($got_type), ' but expected ',
+      message_type_string($exp_type), " for message id $mid\n";
+    return;
+  }
+  return delete $self->{inflight}->{$mid};
+}
+
+sub _process_puback {
+  my ($self, $handle, $msg, $error) = @_;
+  my $rec = $self->_inflight_record($msg) or return;
+  my $mid = $msg->message_id;
   print STDERR 'PubAck: ', $mid, ' ', $rec->{cv}, "\n" if DEBUG;
+  $rec->{cv}->send(1);
+  return 1;
+}
+
+sub _process_pubrec {
+  my ($self, $handle, $msg, $error) = @_;
+  my $rec = $self->_inflight_record($msg) or return;
+  my $mid = $msg->message_id;
+  print STDERR 'PubRec: ', $mid, ' ', $rec->{cv}, "\n" if DEBUG;
+  $self->_send_with_ack({
+                           message_type => MQTT_PUBREL,
+                           qos => MQTT_QOS_AT_LEAST_ONCE,
+                           message_id => $mid,
+                          }, $rec->{cv}, MQTT_PUBCOMP);
+}
+
+sub _process_pubcomp {
+  my ($self, $handle, $msg, $error) = @_;
+  my $rec = $self->_inflight_record($msg) or return;
+  my $mid = $msg->message_id;
+  print STDERR 'PubComp: ', $mid, ' ', $rec->{cv}, "\n" if DEBUG;
   $rec->{cv}->send(1);
   return 1;
 }

@@ -166,5 +166,5 @@ $warn = test_warn(sub { $t1_msg = $t1_cv->recv });
 is($t1_msg, '/t1 message4', '... /t1 message4');
 
 is($warn,
-   q{Got SubAck with no pending subscription for message id: 3},
+   q{SubAck with no pending subscription for message id: 3},
    '... unsolicited message warning');
