@@ -389,7 +389,7 @@ sub _send {
 sub _queue_write {
   my ($self, $msg, $cv) = @_;
   my $queue = $self->{write_queue};
-  print STDERR 'Queuing: ', $cv, ' ', $msg->string, "\n" if DEBUG;
+  print STDERR 'Queuing: ', ($cv||'no cv'), ' ', $msg->string, "\n" if DEBUG;
   push @{$queue}, [$msg, $cv];
   $self->_write_now unless (defined $self->{_waiting});
   $cv;
