@@ -25,13 +25,18 @@ Print a brief help message.
 
 Print the manual page.
 
-=item B<-host>
+=item B<-host A.B.C.D>
 
 The host running the MQTT service.  The default is C<127.0.0.1>.
 
-=item B<-port>
+=item B<-port NNNNN>
 
 The port of the running MQTT service.  The default is 1883.
+
+=item B<-qos N>
+
+The QoS level for the published message.  The default is
+0 (C<MQTT_QOS_AT_MOST_ONCE>).
 
 =item B<-verbose>
 
@@ -53,6 +58,7 @@ given topic.
 =cut
 
 use strict;
+use Net::MQTT::Constants;
 use AnyEvent::MQTT;
 use Getopt::Long;
 use Pod::Usage;
@@ -62,12 +68,14 @@ my $man;
 my $verbose = 0;
 my $host = '127.0.0.1';
 my $port = 1883;
+my $qos = MQTT_QOS_AT_MOST_ONCE;
 my $keep_alive_timer = 120;
 GetOptions('help|?' => \$help,
            'man' => \$man,
            'verbose+' => \$verbose,
            'host=s' => \$host,
            'port=i' => \$port,
+           'qos=i' => \$qos,
            'keepalive=i' => \$keep_alive_timer) or pod2usage(2);
 pod2usage(1) if ($help);
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
@@ -86,7 +94,7 @@ my $mqtt =
                       });
 
 my $condvar;
-my %args = ( topic => $topic );
+my %args = ( topic => $topic, qos => $qos );
 if (@ARGV) {
   $args{message} = join ' ', @ARGV;
 } else {

@@ -214,14 +214,8 @@ sub publish {
   my $cv = exists $p{cv} ? delete $p{cv} : AnyEvent->condvar;
   my $message = $p{message};
   if (defined $message) {
-    print STDERR "publish: message[$message] => $topic\n" if DEBUG;
-    my $mid = $self->{message_id}++ if ($qos);
-    return $self->_send(message_type => MQTT_PUBLISH,
-                        qos => $qos,
-                        topic => $topic,
-                        message_id => $mid,
-                        message => $message,
-                        cv => $cv);
+    $self->_publish($topic, $message, $qos, $cv);
+    return $cv;
   }
   my $handle = exists $p{handle} ? $p{handle} :
     croak ref $self, '->publish requires "message" or "handle" parameter';
@@ -241,17 +235,53 @@ sub publish {
   my $sub; $sub = sub {
     my ($hdl, $chunk, @args) = @_;
     print STDERR "publish: $chunk => $topic\n" if DEBUG;
-    my $mid = $self->{message_id}++;
-    $self->_send(message_type => MQTT_PUBLISH,
-                 qos => $qos,
-                 topic => $topic,
-                 message_id => $mid,
-                 message => $chunk);
-    $handle->push_read(@push_read_args => $sub);
+    my $send_cv = AnyEvent->condvar;
+    $self->_publish($topic, $chunk, $qos, $send_cv);
+    $send_cv->cb(sub { $handle->push_read(@push_read_args => $sub ) });
     return;
   };
   $handle->push_read(@push_read_args => $sub);
   return $cv;
+}
+
+sub _publish {
+  my ($self, $topic, $message, $qos, $cv, $mid, $dup) = @_;
+  print STDERR "publish: message[$message] => $topic\n" if DEBUG;
+  my %args =
+    (
+     message_type => MQTT_PUBLISH,
+     qos => $qos,
+     topic => $topic,
+     message => $message,
+     cv => $cv,
+    );
+  if ($qos) {
+    $mid = $self->{message_id}++ unless (defined $mid);
+    $args{message_id} = $mid;
+    my $save = $qos == MQTT_QOS_AT_LEAST_ONCE ? 'puback' : 'pubrec';
+    my $send_cv = AnyEvent->condvar;
+    $send_cv->cb(sub {
+                   $self->{$save}->{$mid} =
+                     {
+                      message => \%args,
+                      cv => $cv,
+                     };
+                   $args{timeout} =
+                     AnyEvent->timer(after => $self->{keep_alive_timer},
+                                     cb => sub {
+                                       print ref $self, "->publish timeout\n"
+                                         if DEBUG;
+                                       delete $self->{$save}->{$mid};
+                                       $self->_publish($topic, $message,
+                                                       $qos, $cv, $mid, 1);
+                                     })
+                   });
+    $args{cv} = $send_cv;
+  } else {
+    $args{cv} = $cv;
+  }
+  $args{dup} = 1 if ($dup);
+  return $self->_send(%args);
 }
 
 =method C<subscribe( %parameters )>
@@ -359,7 +389,7 @@ sub _send {
 sub _queue_write {
   my ($self, $msg, $cv) = @_;
   my $queue = $self->{write_queue};
-  print STDERR 'Queuing: ', $msg->string, "\n" if DEBUG;
+  print STDERR 'Queuing: ', $cv, ' ', $msg->string, "\n" if DEBUG;
   push @{$queue}, [$msg, $cv];
   $self->_write_now unless (defined $self->{_waiting});
   $cv;
@@ -379,6 +409,7 @@ sub _write_now {
   $self->_reset_keep_alive_timer();
   print STDERR "Sending: ", $msg->string, "\n" if DEBUG;
   $self->{_waiting} = [$msg, $cv];
+  print '  ', (unpack 'H*', $msg->bytes), "\n" if DEBUG;
   $self->{handle}->push_write($msg->bytes);
   $cv;
 }
@@ -525,7 +556,6 @@ sub _process_suback {
 
 sub _process_publish {
   my ($self, $handle, $msg, $error) = @_;
-  # TODO: handle puback, etc
   my $msg_topic = $msg->topic;
   my $msg_data = $msg->message;
   my $rec = $self->{_sub}->{$msg_topic};
@@ -548,7 +578,24 @@ sub _process_publish {
   unless (scalar keys %matched) {
     carp "Unexpected publish:\n", $msg->string('  '), "\n";
   }
+
+  $self->_send(message_type => MQTT_PUBACK, message_id => $msg->message_id)
+    if ($msg->qos == MQTT_QOS_AT_LEAST_ONCE);
+
   return
+}
+
+sub _process_puback {
+  my ($self, $handle, $msg, $error) = @_;
+  my $mid = $msg->message_id;
+  my $rec = delete $self->{puback}->{$mid};
+  unless (defined $rec) {
+    carp "Got PubAck with no pending pub for message id: $mid\n";
+    return;
+  }
+  print STDERR 'PubAck: ', $mid, ' ', $rec->{cv}, "\n" if DEBUG;
+  $rec->{cv}->send(1);
+  return 1;
 }
 
 =method C<anyevent_read_type()>
