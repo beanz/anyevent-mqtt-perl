@@ -74,12 +74,13 @@ plan tests => 17;
 use_ok('AnyEvent::MQTT');
 
 my $mqtt = AnyEvent::MQTT->new(host => $host, port => $port,
-                             client_id => 'acme_mqtt');
+                               client_id => 'acme_mqtt');
 
 ok($mqtt, 'instantiate AnyEvent::MQTT object');
 
 $published = AnyEvent->condvar;
-$cv = $mqtt->publish(message => 'message', topic => '/topic');
+$cv = AnyEvent->condvar;
+$mqtt->publish(message => 'message', topic => '/topic', cv => $cv);
 ok($cv, 'simple message publish');
 is($cv->recv, 1, '... client complete');
 is($published->recv, 1, '... server complete');
