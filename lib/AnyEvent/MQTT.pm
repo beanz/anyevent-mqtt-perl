@@ -278,12 +278,12 @@ sub _send_with_ack {
                       timeout =>
                         AnyEvent->timer(after => $self->{keep_alive_timer},
                                         cb => sub {
-                                          print ref $self, "->publish timeout\n"
-                                            if DEBUG;
-                                          delete $self->{inflight}->{$mid};
-                                          $self->_send_with_ack($args, $cv,
-                                                                $expect, 1);
-                                        }),
+                          print ref $self, " timeout waiting for ",
+                            message_type_string($expect), "\n" if DEBUG;
+                          delete $self->{inflight}->{$mid};
+                          $self->_send_with_ack($args, $cv,
+                                                $expect, 1);
+                        }),
                      };
                    });
     $args->{cv} = $send_cv;
