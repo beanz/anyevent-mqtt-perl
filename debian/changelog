@@ -3,7 +3,7 @@ libanyevent-mqtt-perl (1.110240-1) unstable; urgency=low
   * Support subscribe method with QoS levels 1 and 2.
   * Support publish method with QoS levels 1 and 2.
 
- -- Mark Hindess <soft-debian@temporalanomaly.com>  Mon, 24 Jan 2011 21:20:36 +0000
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Mon, 24 Jan 2011 21:19:02 +0000
 
 libanyevent-mqtt-perl (1.110220-1) unstable; urgency=low
 
