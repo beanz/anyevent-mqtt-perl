@@ -1,6 +1,7 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+    - Support subscribe method with QoS levels 1 and 2.
     - Support publish method with QoS levels 1 and 2.
 
 1.110220  2011-01-22 15:29:52 Europe/London
