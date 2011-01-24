@@ -62,6 +62,19 @@ my @connections =
      desc => q{sent},
      send => sub { $sent->send(1) },
     },
+    {
+     desc => q{pubrel},
+     recv => 'C0 00',
+     send => '6002 04d2',
+    },
+    {
+     desc => q{wait},
+     sleep => 0.1,
+    },
+    {
+     desc => q{sent},
+     send => sub { $sent->send(1) },
+    },
    ],
   );
 
@@ -73,7 +86,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 my ($host,$port) = @{$cv->recv};
 my $addr = join ':', $host, $port;
 
-plan tests => 8;
+plan tests => 10;
 
 use_ok('AnyEvent::MQTT');
 
@@ -96,3 +109,9 @@ $mqtt->_send(message_type => MQTT_PINGREQ); # ping to trigger server to cont.
 is(test_warn(sub { $sent->recv }),
    "Unexpected message for message id 1234\n  PubComp/at-most-once 1234",
    'received unexpected pubcomp message');
+
+$sent = AnyEvent->condvar;
+$mqtt->_send(message_type => MQTT_PINGREQ); # ping to trigger server to cont.
+is(test_warn(sub { $sent->recv }),
+   "Unexpected message for message id 1234\n  PubRel/at-most-once 1234",
+   'received unexpected pubrel message');

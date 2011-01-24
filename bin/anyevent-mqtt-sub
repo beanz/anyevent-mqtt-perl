@@ -21,6 +21,19 @@ Print a brief help message.
 
 Print the manual page.
 
+=item B<-host A.B.C.D>
+
+The host running the MQTT service.  The default is C<127.0.0.1>.
+
+=item B<-port NNNNN>
+
+The port of the running MQTT service.  The default is 1883.
+
+=item B<-qos N>
+
+The QoS level for the published message.  The default is
+0 (C<MQTT_QOS_AT_MOST_ONCE>).
+
 =item B<-verbose>
 
 Include more verbose output.  Without this option the script only
@@ -59,6 +72,7 @@ messages that it receives to stdout.
 =cut
 
 use strict;
+use Net::MQTT::Constants;
 use AnyEvent::MQTT;
 use Getopt::Long;
 use Pod::Usage;
@@ -68,6 +82,7 @@ my $man;
 my $verbose = 0;
 my $host = '127.0.0.1';
 my $port = 1883;
+my $qos = MQTT_QOS_AT_MOST_ONCE;
 my $count;
 my $keep_alive_timer = 120;
 GetOptions('help|?' => \$help,
@@ -75,6 +90,7 @@ GetOptions('help|?' => \$help,
            'verbose+' => \$verbose,
            'host=s' => \$host,
            'port=i' => \$port,
+           'qos=i' => \$qos,
            'count=i' => \$count,
            'one|1' => sub { $count = 1 },
            'keepalive=i' => \$keep_alive_timer) or pod2usage(2);
@@ -95,7 +111,7 @@ my $mqtt =
                       });
 
 foreach my $topic (@ARGV) {
-  $mqtt->subscribe(topic => $topic, callback => \&output);
+  $mqtt->subscribe(topic => $topic, callback => \&output, qos => $qos);
 }
 
 my $condvar = AnyEvent->condvar;

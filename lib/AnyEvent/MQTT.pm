@@ -213,8 +213,10 @@ sub publish {
     croak ref $self, '->publish requires "topic" parameter';
   my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
   my $cv = exists $p{cv} ? delete $p{cv} : AnyEvent->condvar;
-  my $expect =
-    ($qos == MQTT_QOS_AT_LEAST_ONCE ? MQTT_PUBACK : MQTT_PUBREC) if ($qos);
+  my $expect;
+  if ($qos) {
+    $expect = ($qos == MQTT_QOS_AT_LEAST_ONCE ? MQTT_PUBACK : MQTT_PUBREC);
+  }
   my $message = $p{message};
   if (defined $message) {
     print STDERR "publish: message[$message] => $topic\n" if DEBUG;
@@ -564,8 +566,8 @@ sub _process_suback {
   return
 }
 
-sub _process_publish {
-  my ($self, $handle, $msg, $error) = @_;
+sub _publish_locally {
+  my ($self, $msg) = @_;
   my $msg_topic = $msg->topic;
   my $msg_data = $msg->message;
   my $rec = $self->{_sub}->{$msg_topic};
@@ -588,10 +590,21 @@ sub _process_publish {
   unless (scalar keys %matched) {
     carp "Unexpected publish:\n", $msg->string('  '), "\n";
   }
+  1;
+}
 
-  #$self->_send(message_type => MQTT_PUBACK, message_id => $msg->message_id)
-  #  if ($msg->qos == MQTT_QOS_AT_LEAST_ONCE);
-
+sub _process_publish {
+  my ($self, $handle, $msg, $error) = @_;
+  my $qos = $msg->qos;
+  if ($qos == MQTT_QOS_EXACTLY_ONCE) {
+    my $mid = $msg->message_id;
+    $self->{messages}->{$mid} = $msg;
+    $self->_send(message_type => MQTT_PUBREC, message_id => $mid);
+    return;
+  }
+  $self->_publish_locally($msg);
+  $self->_send(message_type => MQTT_PUBACK, message_id => $msg->message_id)
+    if ($qos == MQTT_QOS_AT_LEAST_ONCE);
   return
 }
 
@@ -631,6 +644,19 @@ sub _process_pubrec {
                            qos => MQTT_QOS_AT_LEAST_ONCE,
                            message_id => $mid,
                           }, $rec->{cv}, MQTT_PUBCOMP);
+}
+
+sub _process_pubrel {
+  my ($self, $handle, $msg, $error) = @_;
+  my $mid = $msg->message_id;
+  print STDERR 'PubRel: ', $mid, "\n" if DEBUG;
+  my $pubmsg = delete $self->{messages}->{$mid};
+  unless ($pubmsg) {
+    carp "Unexpected message for message id $mid\n  ".$msg->string;
+    return;
+  }
+  $self->_publish_locally($pubmsg);
+  $self->_send(message_type => MQTT_PUBCOMP, message_id => $mid);
 }
 
 sub _process_pubcomp {
