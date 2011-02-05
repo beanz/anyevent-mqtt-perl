@@ -223,6 +223,7 @@ sub publish {
     $self->_send_with_ack({
                            message_type => MQTT_PUBLISH,
                            qos => $qos,
+                           retain => $p{retain},
                            topic => $topic,
                            message => $message,
                           }, $cv, $expect);
@@ -251,6 +252,7 @@ sub publish {
     $self->_send_with_ack({
                            message_type => MQTT_PUBLISH,
                            qos => $qos,
+                           retain => $p{retain},
                            topic => $topic,
                            message => $chunk,
                           }, $send_cv, $expect);

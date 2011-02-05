@@ -48,6 +48,10 @@ outputs errors
 The keep alive timer value.  Defaults to 120 seconds.  For simplicity,
 it is also currently used as the connection timeout.
 
+=item B<-retain>
+
+Set the retain flag on the message.  Default is not set.
+
 =back
 
 =head1 DESCRIPTION
@@ -70,13 +74,16 @@ my $host = '127.0.0.1';
 my $port = 1883;
 my $qos = MQTT_QOS_AT_MOST_ONCE;
 my $keep_alive_timer = 120;
+my $retain;
 GetOptions('help|?' => \$help,
            'man' => \$man,
            'verbose+' => \$verbose,
            'host=s' => \$host,
            'port=i' => \$port,
            'qos=i' => \$qos,
-           'keepalive=i' => \$keep_alive_timer) or pod2usage(2);
+           'keepalive=i' => \$keep_alive_timer,
+           'retain' => \$retain,
+          ) or pod2usage(2);
 pod2usage(1) if ($help);
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 my $topic = shift || pod2usage(2); # need a topic
@@ -94,7 +101,7 @@ my $mqtt =
                       });
 
 my $condvar;
-my %args = ( topic => $topic, qos => $qos );
+my %args = ( topic => $topic, qos => $qos, retain => $retain );
 if (@ARGV) {
   $args{message} = join ' ', @ARGV;
 } else {
