@@ -47,7 +47,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 my ($host,$port) = @{$cv->recv};
 my $addr = join ':', $host, $port;
 
-plan tests => 11;
+plan tests => 12;
 
 use_ok('AnyEvent::MQTT');
 
@@ -87,4 +87,5 @@ $mqtt =
 ok($mqtt, 'instantiate AnyEvent::MQTT object');
 $cv = $mqtt->connect();
 $cv->recv;
-is_deeply($error, [0, 'connack timeout'], 'connact timeout');
+is($error->[0], 0, 'connact timeout - not fatal');
+is($error->[1], 'connack timeout', 'connact timeout - message');
