@@ -76,7 +76,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 my ($host,$port) = @{$cv->recv};
 my $addr = join ':', $host, $port;
 
-plan tests => 10;
+plan tests => 11;
 
 use_ok('AnyEvent::MQTT');
 
@@ -90,14 +90,15 @@ is($cv->recv, 1, '... connection handshake complete');
 $mqtt->{keep_alive_timer} = 0.2; # hack keep alive timer to avoid long test
 $mqtt->_reset_keep_alive_timer(); # reset it
 $cv = AnyEvent->condvar;
-my $timer = AnyEvent->timer(after => 0.3, cb => sub { $cv->send(1); });
+my $timer = AnyEvent->timer(after => 0.4, cb => sub { $cv->send(1); });
 $cv->recv;
 
 $cv = AnyEvent->condvar;
-$timer = AnyEvent->timer(after => 0.5, cb => sub { $cv->send(0,'oops'); });
+$timer = AnyEvent->timer(after => 0.8, cb => sub { $cv->send(0,'oops'); });
 $mqtt->{on_error} = sub { $cv->send(@_); };
-is_deeply([$cv->recv], [0, 'keep alive timeout'],
-          'non-fatal keep alive timeout error');
+my ($fatal, $err) = $cv->recv;
+is($fatal, 0, 'keep alive timeout error - non-fatal');
+is($err, 'keep alive timeout', 'keep alive timeout error - message');
 
 $mqtt->{keep_alive_timer} = 120; # hack keep alive timer back to default
 $cv = AnyEvent->condvar;
