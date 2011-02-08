@@ -3,6 +3,7 @@ Revision history for Perl extension AnyEvent::MQTT.
 {{$NEXT}}
     - Add retain flag support.
     - Add missing debian libanyevent-perl dependency.
+    - Improve tests to make them easier to debug.
 
 1.110240  2011-01-24 21:19:02 Europe/London
     - Support subscribe method with QoS levels 1 and 2.

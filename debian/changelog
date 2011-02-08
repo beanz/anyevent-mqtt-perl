@@ -1,3 +1,11 @@
+libanyevent-mqtt-perl (1.110390-1) unstable; urgency=low
+
+  * Add retain flag support.
+  * Add missing debian libanyevent-perl dependency.
+  * Improve tests to make them easier to debug.
+
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Tue,  8 Feb 2011 22:59:18 +0000
+
 libanyevent-mqtt-perl (1.110240-1) unstable; urgency=low
 
   * Support subscribe method with QoS levels 1 and 2.
