@@ -1,6 +1,8 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+
+1.110390  2011-02-08 23:01:05 Europe/London
     - Add retain flag support.
     - Add missing debian libanyevent-perl dependency.
     - Improve tests to make them easier to debug.

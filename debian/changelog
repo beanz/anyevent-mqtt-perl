@@ -4,7 +4,7 @@ libanyevent-mqtt-perl (1.110390-1) unstable; urgency=low
   * Add missing debian libanyevent-perl dependency.
   * Improve tests to make them easier to debug.
 
- -- Mark Hindess <soft-debian@temporalanomaly.com>  Tue,  8 Feb 2011 22:59:18 +0000
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Tue,  8 Feb 2011 23:01:05 +0000
 
 libanyevent-mqtt-perl (1.110240-1) unstable; urgency=low
 
