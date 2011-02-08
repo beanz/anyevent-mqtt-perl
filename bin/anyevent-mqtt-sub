@@ -76,7 +76,6 @@ messages that it receives to stdout.
 
 =cut
 
-use strict;
 use Net::MQTT::Constants;
 use AnyEvent::MQTT;
 use Getopt::Long;
