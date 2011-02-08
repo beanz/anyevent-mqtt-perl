@@ -1,0 +1,307 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+
+# ABSTRACT: Perl script for subscribing to an MQTT topic
+# PODNAME: anyevent-mqtt-sub
+
+=head1 SYNOPSIS
+
+  anyevent-mqtt-sub [options] topic1 [topic2] [topic3] ...
+
+=head1 OPTIONS
+
+=over
+
+=item B<-help>
+
+Print a brief help message.
+
+=item B<-man>
+
+Print the manual page.
+
+=item B<-host A.B.C.D>
+
+The host running the MQTT service.  The default is C<127.0.0.1>.
+
+=item B<-port NNNNN>
+
+The port of the running MQTT service.  The default is 1883.
+
+=item B<-qos N>
+
+The QoS level for the published message.  The default is
+0 (C<MQTT_QOS_AT_MOST_ONCE>).
+
+=item B<-verbose>
+
+Include more verbose output.
+
+=item B<-keepalive NNN>
+
+The keep alive timer value.  Defaults to 120 seconds.  For simplicity,
+it is also currently used as the connection/subscription timeout.
+
+=item B<--history-size NNN>
+
+Number of messages to keep for each topic.  Defaults to keeping 20 messages.
+
+=item B<--no-retain>
+
+Ignore retained messages.  That is, wait for new messages rather than
+processing existing retained messages.
+
+=back
+
+=head1 DESCRIPTION
+
+This script subscribes to one or more MQTT topics and prints any
+messages that it receives to stdout.
+
+=cut
+
+use Gtk2 -init;
+use Gtk2::SimpleList;
+use Net::MQTT::Constants;
+use AnyEvent::MQTT;
+use POSIX qw/strftime/;
+use Getopt::Long;
+use Pod::Usage;
+
+my $timefmt = "%Y-%m-%d %H:%M:%S";
+
+my $xpl;
+my $help;
+my $man;
+my $verbose = 0;
+my $retain = 1;
+my $history_size = 20;
+my $host = '127.0.0.1';
+my $port = 1883;
+my $qos = MQTT_QOS_AT_MOST_ONCE;
+my $keep_alive_timer = 120;
+GetOptions('help|?' => \$help,
+           'man' => \$man,
+           'verbose+' => \$verbose,
+           'retain!' => \$retain,
+           'history-size=i' => \$history_size,
+           'host=s' => \$host,
+           'port=i' => \$port,
+           'qos=i' => \$qos,
+           'keepalive=i' => \$keep_alive_timer) or pod2usage(2);
+pod2usage(1) if ($help);
+pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+my $mqtt =
+  AnyEvent::MQTT->new(host => $host, port => $port,
+                      keep_alive_timer => $keep_alive_timer,
+                      on_error => sub {
+                        my ($fatal, $message) = @_;
+                        if ($fatal) {
+                          die $message, "\n";
+                        } else {
+                          warn $message, "\n";
+                        }
+                      });
+
+foreach my $topic (scalar @ARGV ? @ARGV : '#') {
+  $mqtt->subscribe(topic => $topic, callback => \&log, qos => $qos);
+}
+
+my %d;
+my $win = Gtk2::Window->new('toplevel');
+$win->set_title('MQTT Monitor');
+$win->set_default_size(400, 400);
+my $vbox = Gtk2::VBox->new(0,0);
+$win->add($vbox);
+my $slist = Gtk2::SimpleList->new('Topic' => 'text',
+                                  'Message' => 'text',
+                                  'Time' => 'text');
+$slist->signal_connect(button_press_event => \&button_press);
+$slist->set_rules_hint(1);
+$slist->get_selection->set_mode('single');
+$slist->get_selection->unselect_all;
+
+@{$slist->{data}} = ();
+my $scrolled = Gtk2::ScrolledWindow->new;
+$scrolled->set_policy('automatic', 'automatic');
+$scrolled->add($slist);
+$vbox->add($scrolled);
+foreach (['Quit' => sub { Gtk2->main_quit }]) {
+  my $button = Gtk2::Button->new($_->[0]);
+  $button->signal_connect(clicked => $_->[1]);
+  $vbox->pack_start($button, 0, 0, 0);
+}
+my $menu = Gtk2::Menu->new();
+$menu->set_name('client menu');
+my $tearoff = Gtk2::TearoffMenuItem->new();
+$menu->append($tearoff);
+$tearoff->show;
+foreach (['History' => \&history_callback]) {
+  my ($title, $cb) = @$_;
+  my $item = Gtk2::MenuItem->new($title);
+  $item->signal_connect('activate', $cb);
+  $menu->append($item);
+  $item->show;
+}
+$win->show_all;
+
+my $dialog = Gtk2::Window->new();
+$dialog->signal_connect("destroy", sub { $dialog->hide(); 1; });
+$dialog->set_role('dialog');
+$dialog->realize();
+my $hist_list = Gtk2::SimpleList->new('Time' => 'text',
+                                      'Summary' => 'text');
+$hist_list->set_rules_hint(1);
+$hist_list->signal_connect(button_press_event => \&hist_button_press);
+my $dialog_vbox = Gtk2::VBox->new(0,0);
+$dialog->add($dialog_vbox);
+$dialog_vbox->add($hist_list);
+my $hide_button = Gtk2::Button->new('Hide');
+$hide_button->signal_connect(clicked => sub { $dialog->hide(); 1; });
+$dialog_vbox->add($hide_button);
+
+my $hist_menu = Gtk2::Menu->new();
+$hist_menu->set_name('hist menu');
+my $hist_tearoff = Gtk2::TearoffMenuItem->new();
+$hist_menu->append($hist_tearoff);
+$hist_tearoff->show;
+foreach (['Dump' => \&dump_callback]) {
+  my ($title, $cb) = @$_;
+  my $item = Gtk2::MenuItem->new($title);
+  $item->signal_connect('activate', $cb);
+  $hist_menu->append($item);
+  $item->show;
+}
+
+Gtk2->main;
+
+sub log {
+  my ($topic, $message, $obj) = @_;
+  return unless ($retain || !$obj->retain); # skip retained messages
+  my $t = time;
+  $d{src}->{$topic} = {} unless (exists $d{src}->{$topic});
+  my $r = $d{src}->{$topic};
+  unshift @{$r->{hist}}, [$obj, $t];
+  if (scalar @{$r->{hist}} > $history_size) {
+    pop @{$r->{hist}};
+  }
+  $r->{last} = $obj;
+  $r->{last_time} = $t;
+  $r->{last_time_str} = strftime($timefmt, localtime($t));
+  $r->{last_summary} = $message;
+  add_to_list($topic);
+}
+
+sub add_to_list {
+  my ($src) = @_;
+  my @row = $src;
+  foreach (qw/last_summary last_time_str/) {
+    push @row, $d{src}->{$src}->{$_};
+  }
+  insert($slist->{data}, \@row);
+  $d{src}->{$src}->{row} = \@row;
+  return 1;
+}
+
+
+sub insert {
+  my ($list, $row, $key, $first, $last) = @_;
+  $key = $row->[0] unless (defined $key);
+  $first = 0 unless (defined $first);
+  $last = (scalar @$list) - 1 unless (defined $last);
+#  print STDERR "insert: $first $last $key\n";
+  if ($last == -1) {
+#    print "inserting in empty list\n";
+    push @$list, $row;
+    return;
+  }
+  my $first_key = $list->[$first]->[0];
+  my $last_key = $list->[$last]->[0];
+  if ($first_key eq $key) {
+#    print "overwriting at ", $first, " c\n";
+    $list->[$first] = $row;
+    return;
+  }
+  if ($first_key gt $key) {
+#    print "inserting at ", $first, " c\n";
+    splice @$list, $first, 0, $row;
+    return;
+  }
+  if ($key eq $last_key) {
+#    print "overwriting at ", $last, " c\n";
+    $list->[$last] = $row;
+    return;
+  }
+  if ($key ge $last_key) {
+#    print "inserting at ", $last+1, " d\n";
+    splice @$list, $last+1, 0, $row;
+    return;
+  }
+  my $mid = $first + int(($last-$first)/2);
+#  print STDERR "insert: mid = $mid\n";
+  if ($mid == $first || $mid == $last) {
+#    print "inserting at ", $first+1, " e\n";
+    splice @$list, $first+1, 0, $row;
+    return;
+  }
+  my $mid_key = $list->[$mid]->[0];
+#  print "mid = $mid_key B\n";
+  if ($mid_key ge $key) {
+    return insert($list, $row, $key, $first, $mid);
+  } else {
+    return insert($list, $row, $key, $mid, $last);
+  }
+}
+
+sub button_press {
+  my ($widget, $event) = @_;
+  return unless (($event->button == 3) && ($event->type eq "button-press"));
+  my ($path) = $widget->get_path_at_pos($event->x, $event->y);
+  return 1 unless ($path);
+  my $row = $slist->get_row_data_from_path($path);
+  my $src = $row->[0];
+  return 1 unless ($src);
+  my $r = $d{src}->{$src};
+  return 1 unless ($r);
+  $d{selected} = $src;
+  $menu->popup(undef,undef,undef,undef, $event->button, $event->time);
+  return 1;
+}
+
+sub history_callback {
+  my $src = $d{selected} || return 1;
+  my @list;
+  $d{hist_row} = [];
+  foreach (@{$d{src}->{$src}->{hist}}) {
+    my ($msg, $t) = @$_;
+    push @list, [ strftime($timefmt, localtime($t)), $msg->string ];
+    push @{$d{hist_row}}, [$msg, $t];
+  }
+  @{$hist_list->{data}} = @list;
+  $dialog->show_all();
+  $dialog->resize(1, 1);
+  return 1;
+}
+
+sub hist_button_press {
+  my ($widget, $event) = @_;
+  return unless (($event->button == 3) && ($event->type eq "button-press"));
+  my ($path) = $widget->get_path_at_pos($event->x, $event->y);
+  return 1 unless ($path);
+  my $index = $path->to_string();
+  my $rec = $d{hist_row}->[$index];
+  return 1 unless ($rec);
+  $d{hist_selected} = $rec;
+  $hist_menu->popup(undef,undef,undef,undef, $event->button, $event->time);
+  return 1;
+}
+
+sub dump_callback {
+  print $d{hist_selected}->[0]->string, "\n";
+}
+
+=head1 SEE ALSO
+
+AnyEvent::MQTT(3)
