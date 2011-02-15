@@ -9,7 +9,9 @@ Homepage: http://search.cpan.org/dist/AnyEvent-MQTT/
 
 Package: libanyevent-mqtt-perl
 Architecture: all
-Depends: ${perl:Depends}, ${misc:Depends}, libnet-mqtt-perl, libanyevent-perl
+Depends: ${perl:Depends}, ${misc:Depends}, libnet-mqtt-perl,
+ libanyevent-perl, libsub-name-perl
+Suggests: libgtk2-perl
 Description: AnyEvent::MQTT Perl modules for MQTT protocol with AnyEvent
  AnyEvent modules for working with the MQTT protocol described at
  http://mqtt.org.
