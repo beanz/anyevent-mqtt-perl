@@ -51,6 +51,7 @@ use Net::MQTT::Constants;
 use Net::MQTT::Message;
 use Carp qw/croak carp/;
 use Sub::Name;
+use Scalar::Util qw/weaken/;
 
 =method C<new(%params)>
 
@@ -146,6 +147,7 @@ disconnection or fatal error.
 sub cleanup {
   my $self = shift;
   print STDERR "cleanup\n" if DEBUG;
+  $self->{handle}->destroy if ($self->{handle});
   delete $self->{handle};
   delete $self->{connected};
   delete $self->{wait};
@@ -240,18 +242,21 @@ sub publish {
   my $error_sub = $handle->{on_error}; # Hack: There is no accessor api
   $handle->on_error(subname 'on_error_for_read_publish_'.$topic =>
                     sub {
+                      my ($hdl, $fatal, $msg) = @_;
                       $error_sub->(@_) if ($error_sub);
-                      $handle->destroy;
-                      undef $handle;
+                      $hdl->destroy;
+                      undef $hdl;
                       $cv->send(1);
                     });
+  my $weak_self = $self;
+  weaken $weak_self;
   my @push_read_args = @{$p{push_read_args}||['line']};
   my $sub; $sub = subname 'push_read_cb_for_'.$topic => sub {
     my ($hdl, $chunk, @args) = @_;
     print STDERR "publish: $chunk => $topic\n" if DEBUG;
     my $send_cv = AnyEvent->condvar;
     print STDERR "publish: message[$chunk] => $topic\n" if DEBUG;
-    $self->_send_with_ack({
+    $weak_self->_send_with_ack({
                            message_type => MQTT_PUBLISH,
                            qos => $qos,
                            retain => $p{retain},
@@ -434,10 +439,12 @@ sub _reset_keep_alive_timer {
   undef $self->{_keep_alive_handle};
   my $method = $wait ? '_keep_alive_timeout' : '_send_keep_alive';
   $self->{_keep_alive_waiting} = $wait;
+  my $weak_self = $self;
+  weaken $weak_self;
   $self->{_keep_alive_handle} =
     AnyEvent->timer(after => $self->{keep_alive_timer},
                     cb => subname((substr $method, 1).'_cb' =>
-                                  sub { $self->$method(@_) }));
+                                  sub { $weak_self->$method(@_) }));
 }
 
 sub _send_keep_alive {
@@ -482,6 +489,10 @@ sub connect {
     $cv = $self->{connect_cv};
   }
   return $cv if ($self->{handle});
+
+  my $weak_self = $self;
+  weaken $weak_self;
+
   my $hd;
   $hd = $self->{handle} =
     AnyEvent::Handle->new(connect => [$self->{host}, $self->{port}],
@@ -489,33 +500,34 @@ sub connect {
                             my ($handle, $fatal, $message) = @_;
                             print STDERR "handle error $_[1]\n" if DEBUG;
                             $handle->destroy;
-                            $self->_error($fatal, 'Error: '.$message, 0);
+                            $weak_self->_error($fatal, 'Error: '.$message, 0);
                           }),
                           # on_eof => ... no eof as there is no QUIT so
                           # there is always a waiting reader
                           on_timeout => subname('on_timeout_cb' => sub {
-                            $self->_error(0, $self->{wait}.' timeout', 1);
-                            $self->{wait} = 'nothing';
+                            $weak_self->_error(0, $weak_self->{wait}.' timeout', 1);
+                            $weak_self->{wait} = 'nothing';
                           }),
                           on_connect => subname('on_connect_cb' => sub {
+                            my ($handle, $host, $port, $retry) = @_;
                             print STDERR "TCP handshake complete\n" if DEBUG;
                             my $msg =
                               Net::MQTT::Message->new(
                                 message_type => MQTT_CONNECT,
-                                keep_alive_timer => $self->{keep_alive_timer},
-                                client_id => $self->{client_id},
-                                clean_session => $self->{clean_session},
-                                will_topic => $self->{will_topic},
-                                will_qos => $self->{will_qos},
-                                will_retain => $self->{will_retain},
-                                will_message => $self->{will_message},
+                                keep_alive_timer => $weak_self->{keep_alive_timer},
+                                client_id => $weak_self->{client_id},
+                                clean_session => $weak_self->{clean_session},
+                                will_topic => $weak_self->{will_topic},
+                                will_qos => $weak_self->{will_qos},
+                                will_retain => $weak_self->{will_retain},
+                                will_message => $weak_self->{will_message},
                               );
-                            $self->_write_now($msg);
-                            $hd->timeout($self->{timeout});
-                            $self->{wait} = 'connack';
-                            $hd->push_read(ref $self =>
+                            $weak_self->_write_now($msg);
+                            $handle->timeout($weak_self->{timeout});
+                            $weak_self->{wait} = 'connack';
+                            $handle->push_read(ref $weak_self =>
                                            subname 'reader_cb' => sub {
-                                             $self->_handle_message(@_);
+                                             $weak_self->_handle_message(@_);
                                              return;
                                            });
                           }));
@@ -553,11 +565,15 @@ sub _process_connack {
   $self->{connected} = 1;
   $self->{connect_cv}->send(1) if ($self->{connect_cv});
   delete $self->{connect_cv};
+
+  my $weak_self = $self;
+  weaken $weak_self;
+
   $handle->on_drain(subname 'on_drain_cb' => sub {
                       print STDERR "drained\n" if DEBUG;
-                      my $w = $self->{_waiting};
+                      my $w = $weak_self->{_waiting};
                       $w->[1]->send(1) if (ref $w && defined $w->[1]);
-                      $self->_write_now;
+                      $weak_self->_write_now;
                       1;
                     });
   return
@@ -686,6 +702,7 @@ method to read MQTT messages.
 sub anyevent_read_type {
   my ($handle, $cb) = @_;
   subname 'anyevent_read_type_reader' => sub {
+    my ($handle) = @_;
     my $rbuf = \$handle->{rbuf};
     return unless (defined $$rbuf);
     while (1) {
