@@ -1,6 +1,9 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+    - New script 'anyevent-mqtt-monitor' (requires Gtk2).
+    - Debugging improvements.
+    - Memory leak fixes.
 
 1.110390  2011-02-08 23:01:05 Europe/London
     - Add retain flag support.
