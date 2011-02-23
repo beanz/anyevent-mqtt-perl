@@ -9,6 +9,7 @@ use constant {
 use File::Temp qw/tempfile/;
 use Net::MQTT::Constants;
 use Errno qw/EPIPE/;
+use Scalar::Util qw/weaken/;
 
 $|=1;
 
@@ -91,6 +92,7 @@ sysseek $fh, 0, 0;
 
 $published = AnyEvent->condvar;
 my $eof = AnyEvent->condvar;
+my $weak_eof = $eof; weaken $weak_eof;
 my $pcv =
   $mqtt->publish(handle => $fh, topic => '/topic',
                  qos => MQTT_QOS_AT_MOST_ONCE,
@@ -98,7 +100,7 @@ my $pcv =
                                     my ($hdl, $fatal, $msg) = @_;
                                     # error on fh close as
                                     # readers are waiting
-                                    $eof->send($!{EPIPE});
+                                    $weak_eof->send($!{EPIPE});
                                     $hdl->destroy;
                                   }]);
 ok($pcv, 'publish file handle');
@@ -112,6 +114,7 @@ sysseek $fh, 0, 0;
 
 $published = AnyEvent->condvar;
 $eof = AnyEvent->condvar;
+$weak_eof = $eof; weaken $weak_eof;
 my $handle;
 $handle = AnyEvent::Handle->new(fh => $fh,
                                 on_error => sub {
