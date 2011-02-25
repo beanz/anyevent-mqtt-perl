@@ -19,22 +19,17 @@ BEGIN {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
   import Test::More;
-  use t::Helpers qw/:all/;
-  use t::MockServer;
+  use t::MockServer qw/:all/;
 }
 
 my @connections =
   (
    [
-    t::MockServer::Receive->new(
-     description => q{connect invalid client id},
-     data => '102600064D514973647003020078
-              0018 616161616161616161616161616161616161616161616161',
-    ),
-    t::MockServer::Send->new(
-     description => q{connack invalid client id},
-     data => '20020002',
-    ),
+    mockrecv('10 26 00 06  4D 51 49 73   64 70 03 02  00 78 00 18
+              61 61 61 61  61 61 61 61   61 61 61 61  61 61 61 61
+              61 61 61 61  61 61 61 61',
+             q{connect invalid client id}),
+    mocksend('20 02 00 02', q{connack invalid client id}),
    ],
   );
 

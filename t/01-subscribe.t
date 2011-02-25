@@ -20,83 +20,36 @@ BEGIN {
   }
   import Test::More;
   use t::Helpers qw/test_warn/;
-  use t::MockServer;
+  use t::MockServer qw/:all/;
 }
 
 my @connections =
   (
    [
-    t::MockServer::Receive->new(
-     description => 'connect',
-     data => '10 17
-              00 06 4D 51 49 73 64 70
-              03 02 00 78
-              00 09 61 63 6D 65 5F 6D 71 74 74',
-    ),
-    t::MockServer::Send->new(
-     description => 'connack',
-     data => '20 02 00 00',
-    ),
-    t::MockServer::Receive->new(
-     description => q{subscribe /t1},
-     data => '82 08 00 01 00 03 2F 74 31 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{suback /t1},
-     data => '90 03 00 01 00',
-    ),
-    t::MockServer::Receive->new(
-     description => q{subscribe /t2},
-     data => '82 08 00 02 00 03 2F 74 32 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{suback /t2},
-     data => '90 03 00 02 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{publish /t1 message1},
-     data => '30 0d 00 03 2f 74 31 6d 65 73  73 61 67 65 31',
-    ),
-    t::MockServer::Receive->new(
-     description => q{pingreq trigger next publish},
-     data => 'C0 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{pingreq triggering next publish},
-     data => '30 0d 00 03 2f 74 31 6d 65 73  73 61 67 65 32',
-    ),
-    t::MockServer::Send->new(
-     description => q{publish /t2 message1},
-     data => '30 0d 00 03 2f 74 32 6d 65 73  73 61 67 65 31',
-    ),
-    t::MockServer::Receive->new(
-     description => q{pingreq trigger unsolicited publish},
-     data => 'C0 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{pingreq trigger unsolicited publish},
-     data => '30 0d 00 03 2f 74 33 6d 65 73  73 61 67 65 31',
-    ),
-    t::MockServer::Send->new(
-     description => q{publish /t1 message3},
-     data => '30 0d 00 03 2f 74 31 6d 65 73  73 61 67 65 33',
-    ),
-    t::MockServer::Receive->new(
-     description => q{pingreq trigger unsolicited suback},
-     data => 'C0 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{pingreq trigger unsolicited suback},
-     data => '90 03 00 03 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{publish /t1 message4},
-     data => '30 0d 00 03 2f 74 31 6d 65 73  73 61 67 65 34',
-    ),
-    t::MockServer::Receive->new(
-     description => q{pingreq trigger ...},
-     data => 'C0 00',
-    ),
+    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+              61 63 6D 65  5F 6D 71 74   74', 'connect'),
+    mocksend('20 02 00 00', 'connack'),
+    mockrecv('82 08 00 01  00 03 2F 74   31 00', q{subscribe /t1}),
+    mocksend('90 03 00 01  00', q{suback /t1}),
+    mockrecv('82 08 00 02  00 03 2F 74   32 00', q{subscribe /t2}),
+    mocksend('90 03 00 02  00', q{suback /t2}),
+    mocksend('30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 31',
+             q{publish /t1 message1}),
+    mockrecv('C0 00', q{pingreq trigger next publish}),
+    mocksend('30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 32',
+             q{pingreq triggering next publish}),
+    mocksend('30 0d 00 03  2f 74 32 6d   65 73 73 61  67 65 31',
+             q{publish /t2 message1}),
+    mockrecv('C0 00', q{pingreq trigger unsolicited publish}),
+    mocksend('30 0d 00 03  2f 74 33 6d   65 73 73 61  67 65 31',
+             q{pingreq trigger unsolicited publish}),
+    mocksend('30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 33',
+             q{publish /t1 message3}),
+    mockrecv('C0 00', q{pingreq trigger unsolicited suback}),
+    mocksend('90 03 00 03  00', q{pingreq trigger unsolicited suback}),
+    mocksend('30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 34',
+             q{publish /t1 message4}),
+    mockrecv('C0 00', q{pingreq trigger ...}),
    ],
   );
 

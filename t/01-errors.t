@@ -22,25 +22,16 @@ BEGIN {
   }
   import Test::More;
   use t::Helpers qw/test_error/;
-  use t::MockServer;
+  use t::MockServer qw/:all/;
 }
 
 my @connections =
   (
+   [], # just close
    [
-   ],
-   [
-    t::MockServer::Receive->new(
-     description => 'connect',
-     data => '10 17
-              00 06 4D 51 49 73 64 70
-              03 02 00 78
-              00 09 61 63 6D 65 5F 6D 71 74 74',
-    ),
-    t::MockServer::Sleep->new(
-     description => 'connect timeout',
-     interval => 0.5,
-    ),
+    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+              61 63 6D 65  5F 6D 71 74   74', 'connect'),
+    mocksleep(0.5, 'connect timeout'),
    ],
   );
 

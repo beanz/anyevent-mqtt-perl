@@ -20,47 +20,22 @@ BEGIN {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
   import Test::More;
-  use t::Helpers qw/:all/;
-  use t::MockServer;
+  use t::MockServer qw/:all/;
 }
 
 my $published;
 my @connections =
   (
    [
-    t::MockServer::Receive->new(
-     description => q{connect},
-     data => '10 17
-              00 06 4D 51 49 73 64 70
-              03 02 00 78
-              00 09 61 63 6D 65 5F 6D 71 74 74',
-    ),
-    t::MockServer::Send->new(
-     description => q{connack},
-     data => '20 02 00 00',
-    ),
-    t::MockServer::Receive->new(
-     description => q{publish},
-     data => '34 12
-              00 06 2F 74 6F 70 69 63 00 01
-              6D 65 73 73 61 67 65 31',
-    ),
-    t::MockServer::Send->new(
-     description => q{pubrec},
-     data => '50 02 00 01',
-    ),
-    t::MockServer::Receive->new(
-     description => q{pubrel},
-     data => '62 02 00 01',
-    ),
-    t::MockServer::Send->new(
-     description => q{pubcomp},
-     data => '70 02 00 01',
-    ),
-    t::MockServer::Code->new(
-     description => q{publish complete},
-     code => sub { $published->send(1) },
-    ),
+    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+              61 63 6D 65  5F 6D 71 74   74', q{connect}),
+    mocksend('20 02 00 00', q{connack}),
+    mockrecv('34 12 00 06  2F 74 6F 70   69 63 00 01  6D 65 73 73
+              61 67 65 31', q{publish}),
+    mocksend('50 02 00 01', q{pubrec}),
+    mockrecv('62 02 00 01', q{pubrel}),
+    mocksend('70 02 00 01', q{pubcomp}),
+    mockcode(sub { $published->send(1) }, q{publish complete}),
    ],
   );
 

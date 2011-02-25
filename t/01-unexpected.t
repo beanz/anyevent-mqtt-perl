@@ -21,73 +21,30 @@ BEGIN {
   }
   import Test::More;
   use t::Helpers qw/test_warn/;
-  use t::MockServer;
+  use t::MockServer qw/:all/;
 }
 
 my $sent = AnyEvent->condvar;
 my @connections =
   (
    [
-    t::MockServer::Receive->new(
-     description => q{connect invalid message},
-     data => '101700064D514973647003020078000961636D655F6D717474',
-    ),
-    t::MockServer::Send->new(
-     description => q{invalid message},
-     data => '101700064d514973647003020078000961636d655f6d717474',
-    ),
-    t::MockServer::Send->new(
-     description => q{connack},
-     data => '20020000',
-    ),
-    t::MockServer::Receive->new(
-     description => q{pingreq trigger},
-     data => 'C0 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{puback},
-     data => '4002 04d2',
-    ),
-    t::MockServer::Sleep->new(
-     description => q{wait},
-     interval => 0.1,
-    ),
-    t::MockServer::Code->new(
-     description => q{sent},
-     code => sub { $sent->send(1) },
-    ),
-    t::MockServer::Receive->new(
-     description => q{pingreq trigger},
-     data => 'C0 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{pubcomp},
-     data => '7002 04d2',
-    ),
-    t::MockServer::Sleep->new(
-     description => q{wait},
-     interval => 0.1,
-    ),
-    t::MockServer::Code->new(
-     description => q{sent},
-     code => sub { $sent->send(1) },
-    ),
-    t::MockServer::Receive->new(
-     description => q{pingreq trigger},
-     data => 'C0 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{pubrel},
-     data => '6002 04d2',
-    ),
-    t::MockServer::Sleep->new(
-     description => q{wait},
-     interval => 0.1,
-    ),
-    t::MockServer::Code->new(
-     description => q{sent},
-     code => sub { $sent->send(1) },
-    ),
+    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+              61 63 6D 65  5F 6D 71 74   74', q{connect invalid message}),
+    mocksend('10 17 00 06  4d 51 49 73   64 70 03 02  00 78 00 09
+              61 63 6d 65  5f 6d 71 74   74', q{invalid message}),
+    mocksend('20 02 00 00', q{connack}),
+    mockrecv('C0 00', q{pingreq trigger}),
+    mocksend('40 02 04 d2', q{puback}),
+    mocksleep(0.1, q{wait}),
+    mockcode(sub { $sent->send(1) }, q{sent}),
+    mockrecv('C0 00', q{pingreq trigger}),
+    mocksend('70 02 04 d2', q{pubcomp}),
+    mocksleep(0.1, q{wait}),
+    mockcode(sub { $sent->send(1) }, q{sent}),
+    mockrecv('C0 00', q{pingreq trigger}),
+    mocksend('60 02 04 d2', q{pubrel}),
+    mocksleep(0.1, q{wait}),
+    mockcode(sub { $sent->send(1) }, q{sent}),
    ],
   );
 

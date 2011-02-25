@@ -28,6 +28,10 @@ use AnyEvent::Handle;
 use Test::More;
 use Scalar::Util qw/weaken/;
 
+our %EXPORT_TAGS = ( 'all' => [ qw(mocksend mockrecv mocksleep mockcode) ] );
+our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+our @EXPORT = qw();
+
 sub new {
   my $pkg = shift;
   my $self =
@@ -111,7 +115,7 @@ sub connect_string {
 
 sub handle_connection {
   my ($self, $handle, $actions) = @_;
-  print STDERR "In handle connection ", scalar @$actions, "\n" if DEBUG;
+  print STDERR 'In handle connection ', scalar @$actions, "\n" if DEBUG;
   my $action = shift @$actions;
   unless (defined $action) {
     print STDERR "closing connection\n" if DEBUG;
@@ -119,80 +123,67 @@ sub handle_connection {
     delete $self->{handles}->{$handle};
     return;
   }
-  return $action->act($self, $handle, $actions);
+  $action->($self, $handle, $actions);
 }
 
-package t::MockServer::Action;
-sub new {
-  my $pkg = shift;
-  bless { @_ }, $pkg;
+sub mocksend {
+  my ($data, $desc) = @_;
+  sub {
+    my ($server, $handle, $actions) = @_;
+    my $send = $data;
+    $send =~ s/\s+//g if (defined $send);
+    print STDERR 'Sending: ', $send, ' ', $desc, "\n" if DEBUG;
+    $send = pack 'H*', $send;
+    print STDERR 'Sending ', length $send, " bytes\n" if DEBUG;
+    $handle->push_write($send);
+    $server->handle_connection($handle, $actions);
+  }
 }
 
-sub description {
-  shift->{description}
+sub mockrecv {
+  my ($data, $desc) = @_;
+  sub {
+    my ($server, $handle, $actions) = @_;
+    my $recv = $data;
+    $recv =~ s/\s+//g;
+    my $expect = $recv;
+    print STDERR 'Waiting for ', $recv, ' ', $desc, "\n" if DEBUG;
+    my $len = .5*length $recv;
+    print STDERR 'Waiting for ', $len, " bytes\n" if DEBUG;
+    $handle->push_read(chunk => $len,
+                       sub {
+                         my ($hdl, $data) = @_;
+                         print STDERR "In receive handler\n" if DEBUG;
+                         my $got = uc unpack 'H*', $data;
+                         is($got, $expect,
+                            '... correct message received by server - '.$desc);
+                         $server->handle_connection($hdl, $actions);
+                         1;
+                       });
+  }
 }
 
-package t::MockServer::Send;
-our @ISA = 't::MockServer::Action';
-
-sub act {
-  my ($self, $server, $handle, $actions) = @_;
-  my $send = $self->{data};
-  $send =~ s/\s+//g if (defined $send);
-  print STDERR "Sending: ", $send if t::MockServer::DEBUG;
-  $send = pack "H*", $send;
-  print STDERR "Sending ", length $send, " bytes\n" if t::MockServer::DEBUG;
-  $handle->push_write($send);
-  $server->handle_connection($handle, $actions);
-  return 1;
+sub mocksleep {
+  my ($interval, $desc) = @_;
+  sub {
+    my ($server, $handle, $actions) = @_;
+    print STDERR 'Sleeping for ', $interval, ' ', $desc, "\n" if DEBUG;
+    my $w;
+    $w = AnyEvent->timer(after => $interval,
+                         cb => sub {
+                           $server->handle_connection($handle, $actions);
+                           undef $w;
+                         });
+  }
 }
 
-package t::MockServer::Receive;
-our @ISA = 't::MockServer::Action';
-
-sub act {
-  my ($self, $server, $handle, $actions) = @_;
-  my $recv = $self->{data};
-  $recv =~ s/\s+//g;
-  my $expect = $recv;
-  print STDERR "Waiting for ", $recv, "\n" if t::MockServer::DEBUG;
-  my $len = .5*length $recv;
-  print STDERR "Waiting for ", $len, " bytes\n" if t::MockServer::DEBUG;
-  $handle->push_read(chunk => $len,
-                     sub {
-                       my ($hdl, $data) = @_;
-                       print STDERR "In receive handler\n"
-                         if t::MockServer::DEBUG;
-                       my $got = uc unpack 'H*', $data;
-                       t::MockServer::is($got, $expect,
-                          '... correct message received by server - '.
-                          $self->description);
-                       $server->handle_connection($hdl, $actions);
-                       1;
-                     });
-  return;
-}
-
-package t::MockServer::Sleep;
-our @ISA = 't::MockServer::Action';
-
-sub act {
-  my ($self, $server, $handle, $actions) = @_;
-  my $w; $w = AnyEvent->timer(after => $self->{interval}, cb => sub {
-                                $server->handle_connection($handle, $actions);
-                                undef $w;
-                              });
-  return;
-}
-
-package t::MockServer::Code;
-our @ISA = 't::MockServer::Action';
-
-sub act {
-  my ($self, $server, $handle, $actions) = @_;
-  $self->{code}->($server, $handle);
-  $server->handle_connection($handle, $actions);
-  return 1;
+sub mockcode {
+  my ($code, $desc) = @_;
+  sub {
+    my ($server, $handle, $actions) = @_;
+    $code->($server, $handle);
+    $server->handle_connection($handle, $actions);
+  }
 }
 
 1;

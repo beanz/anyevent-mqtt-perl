@@ -19,65 +19,28 @@ BEGIN {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
   import Test::More;
-  use t::Helpers qw/:all/;
-  use t::MockServer;
+  use t::MockServer qw/:all/;
 }
 
 my @connections =
   (
    [
-    t::MockServer::Receive->new(
-     description => q{connect},
-     data => '10 17
-              00 06 4D 51 49 73 64 70
-              03 02 00 78
-              00 09 61 63 6D 65 5F 6D 71 74 74',
-    ),
-    t::MockServer::Send->new(
-     description => q{connack},
-     data => '20 02 00 00',
-    ),
-    t::MockServer::Receive->new(
-     description => q{pingreq},
-     data => 'C0 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{pingresp},
-     data => 'D0 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{pingresp dup},
-     data => 'D0 00',
-    ),
-    t::MockServer::Sleep->new(
-     description => q{pingreq timeout},
-     interval => 0.5,
-    ),
+    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+              61 63 6D 65  5F 6D 71 74   74', q{connect}),
+    mocksend('20 02 00 00', q{connack}),
+    mockrecv('C0 00', q{pingreq}),
+    mocksend('D0 00', q{pingresp}),
+    mocksend('D0 00', q{pingresp dup}),
+    mocksleep(0.5,  q{pingreq timeout}),
    ],
    [
-    t::MockServer::Receive->new(
-     description => q{connect},
-     data => '10 17
-              00 06 4D 51 49 73 64 70
-              03 00 00 78
-              00 09 61 63 6D 65 5F 6D 71 74 74',
-    ),
-    t::MockServer::Send->new(
-     description => q{connack},
-     data => '20 02 00 00',
-    ),
-    t::MockServer::Receive->new(
-     description => q{subscribe /t1},
-     data => '82 08 00 01 00 03 2F 74 31 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{suback /t1},
-     data => '90 03 00 01 00',
-    ),
-    t::MockServer::Send->new(
-     description => q{publish /t1 message1},
-     data => '30 0d 00 03 2f 74 31 6d 65 73  73 61 67 65 31',
-    ),
+    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 00  00 78 00 09
+              61 63 6D 65  5F 6D 71 74   74', q{connect}),
+    mocksend('20 02 00 00', q{connack}),
+    mockrecv('82 08 00 01  00 03 2F 74   31 00', q{subscribe /t1}),
+    mocksend('90 03 00 01  00', q{suback /t1}),
+    mocksend('30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 31',
+             q{publish /t1 message1}),
    ],
   );
 

@@ -22,7 +22,7 @@ BEGIN {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
   import Test::More;
-  use t::MockServer;
+  use t::MockServer qw/:all/;
 }
 
 my $published;
@@ -30,47 +30,18 @@ my $error;
 my @connections =
   (
    [
-    t::MockServer::Receive->new(
-     description => 'connect',
-     data => '10 17
-              00 06 4D 51 49 73 64 70
-              03 02 00 78
-              00 09 61 63 6D 65 5F 6D 71 74 74',
-    ),
-    t::MockServer::Send->new(
-     description => 'connack',
-     data => '20 02 00 00',
-    ),
-    t::MockServer::Receive->new(
-     description => q{publish},
-     data => '30 0F
-              00 06 2F 74 6F 70 69 63
-              6D 65 73 73 61 67 65',
-    ),
-    t::MockServer::Code->new(
-     description => q{published},
-     code => sub { $published->send(1) },
-    ),
-    t::MockServer::Receive->new(
-     description => q{publish file handle},
-     data => '30 10
-              00 06 2F 74 6F 70 69 63
-              6D 65 73 73 61 67 65 32',
-    ),
-    t::MockServer::Code->new(
-     description => q{publish file handle done},
-     code => sub { $published->send(2) },
-    ),
-    t::MockServer::Receive->new(
-     description => q{publish AnyEvent::Handle},
-     data => '30 10
-              00 06 2F 74 6F 70 69 63
-              6D 65 73 73 61 67 65 33',
-    ),
-    t::MockServer::Code->new(
-     description => q{publish AnyEvent::Handle done},
-     code => sub { $published->send(3) },
-    ),
+    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+              61 63 6D 65  5F 6D 71 74   74', 'connect'),
+    mocksend('20 02 00 00', 'connack'),
+    mockrecv('30 0F 00 06  2F 74 6F 70   69 63 6D 65  73 73 61 67
+              65', q{publish}),
+    mockcode(sub { $published->send(1) }, q{published}),
+    mockrecv('30 10 00 06  2F 74 6F 70   69 63 6D 65  73 73 61 67
+              65 32', q{publish file handle}),
+    mockcode(sub { $published->send(2) }, q{publish file handle done}),
+    mockrecv('30 10 00 06  2F 74 6F 70   69 63 6D 65  73 73 61 67
+              65 33', q{publish AnyEvent::Handle}),
+    mockcode(sub { $published->send(3) }, q{publish AnyEvent::Handle done}),
    ],
   );
 
