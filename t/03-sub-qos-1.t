@@ -19,45 +19,52 @@ BEGIN {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
   import Test::More;
-  use t::Helpers qw/:all/;
+  use t::MockServer;
 }
 
 my $published = AnyEvent->condvar;
 my @connections =
   (
    [
-    {
-     desc => q{connect},
-     recv => '10 17
+    t::MockServer::Receive->new(
+     description => q{connect},
+     data => '10 17
               00 06 4D 51 49 73 64 70
               03 02 00 78
               00 09 61 63 6D 65 5F 6D 71 74 74',
-     send => '20 02 00 00',
-    },
-    {
-     desc => q{subscribe /t1},
-     recv => '82 08 00 01 00 03 2F 74 31 01',
-     send => '90 03 00 01 01',
-    },
-    {
-     desc => q{publish /t1 message1},
-     send => '32 0f 00 03 2f 74 31 00 01 6d 65 73  73 61 67 65 31',
-    },
-    {
-     desc => q{puback},
-     recv => '40 02 00 01',
-     send => sub { $published->send(1) },
-    },
+    ),
+    t::MockServer::Send->new(
+     description => q{connack},
+     data => '20 02 00 00',
+    ),
+    t::MockServer::Receive->new(
+     description => q{subscribe /t1},
+     data => '82 08 00 01 00 03 2F 74 31 01',
+    ),
+    t::MockServer::Send->new(
+     description => q{suback /t1},
+     data => '90 03 00 01 01',
+    ),
+    t::MockServer::Send->new(
+     description => q{publish /t1 message1},
+     data => '32 0f 00 03 2f 74 31 00 01 6d 65 73  73 61 67 65 31',
+    ),
+    t::MockServer::Receive->new(
+     description => q{puback},
+     data => '40 02 00 01',
+    ),
+    t::MockServer::Code->new(
+     description => q{puback received},
+     code => sub { $published->send(1) },
+    ),
    ],
   );
 
-my $cv = AnyEvent->condvar;
-
-eval { test_server($cv, @connections) };
+my $server;
+eval { $server = t::MockServer->new(@connections) };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
-my ($host,$port) = @{$cv->recv};
-my $addr = join ':', $host, $port;
+my ($host, $port) = $server->connect_address;
 
 plan tests => 8;
 
@@ -68,7 +75,7 @@ my $mqtt = AnyEvent::MQTT->new(host => $host, port => $port,
 
 ok($mqtt, 'instantiate AnyEvent::MQTT object');
 
-$cv = AnyEvent->condvar;
+my $cv = AnyEvent->condvar;
 my $sub = $mqtt->subscribe(topic => '/t1', qos => MQTT_QOS_AT_LEAST_ONCE,
                            callback => sub {
                              my ($topic, $message) = @_;

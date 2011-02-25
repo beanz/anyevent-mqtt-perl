@@ -20,33 +20,35 @@ BEGIN {
   }
   import Test::More;
   use t::Helpers qw/:all/;
+  use t::MockServer;
 }
 
-my $sent = AnyEvent->condvar;
 my @connections =
   (
    [
-    {
-     desc => q{connect invalid client id},
-     recv => '102600064D514973647003020078
+    t::MockServer::Receive->new(
+     description => q{connect invalid client id},
+     data => '102600064D514973647003020078
               0018 616161616161616161616161616161616161616161616161',
-     send => '20020002',
-    },
+    ),
+    t::MockServer::Send->new(
+     description => q{connack invalid client id},
+     data => '20020002',
+    ),
    ],
   );
 
-my $cv = AnyEvent->condvar;
-
-eval { test_server($cv, @connections) };
+my $server;
+eval { $server = t::MockServer->new(@connections) };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
-my ($host,$port) = @{$cv->recv};
-my $addr = join ':', $host, $port;
+my ($host, $port) = $server->connect_address;
 
 plan tests => 5;
 
 use_ok('AnyEvent::MQTT');
 
+my $cv = AnyEvent->condvar;
 my $error = AnyEvent->condvar;
 my $mqtt =
   AnyEvent::MQTT->new(host => $host, port => $port, client_id => 'a' x 24,

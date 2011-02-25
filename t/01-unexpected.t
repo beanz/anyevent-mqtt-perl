@@ -20,71 +20,82 @@ BEGIN {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
   import Test::More;
-  use t::Helpers qw/:all/;
+  use t::Helpers qw/test_warn/;
+  use t::MockServer;
 }
 
 my $sent = AnyEvent->condvar;
 my @connections =
   (
    [
-    {
-     desc => q{connect invalid message},
-     recv => '101700064D514973647003020078000961636D655F6D717474',
-     send => '101700064d514973647003020078000961636d655f6d717474',
-    },
-    {
-     desc => q{connack},
-     send => '20020000',
-    },
-    {
-     desc => q{puback},
-     recv => 'C0 00',
-     send => '4002 04d2',
-    },
-    {
-     desc => q{wait},
-     sleep => 0.1,
-    },
-    {
-     desc => q{sent},
-     send => sub { $sent->send(1) },
-    },
-    {
-     desc => q{pubcomp},
-     recv => 'C0 00',
-     send => '7002 04d2',
-    },
-    {
-     desc => q{wait},
-     sleep => 0.1,
-    },
-    {
-     desc => q{sent},
-     send => sub { $sent->send(1) },
-    },
-    {
-     desc => q{pubrel},
-     recv => 'C0 00',
-     send => '6002 04d2',
-    },
-    {
-     desc => q{wait},
-     sleep => 0.1,
-    },
-    {
-     desc => q{sent},
-     send => sub { $sent->send(1) },
-    },
+    t::MockServer::Receive->new(
+     description => q{connect invalid message},
+     data => '101700064D514973647003020078000961636D655F6D717474',
+    ),
+    t::MockServer::Send->new(
+     description => q{invalid message},
+     data => '101700064d514973647003020078000961636d655f6d717474',
+    ),
+    t::MockServer::Send->new(
+     description => q{connack},
+     data => '20020000',
+    ),
+    t::MockServer::Receive->new(
+     description => q{pingreq trigger},
+     data => 'C0 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{puback},
+     data => '4002 04d2',
+    ),
+    t::MockServer::Sleep->new(
+     description => q{wait},
+     interval => 0.1,
+    ),
+    t::MockServer::Code->new(
+     description => q{sent},
+     code => sub { $sent->send(1) },
+    ),
+    t::MockServer::Receive->new(
+     description => q{pingreq trigger},
+     data => 'C0 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{pubcomp},
+     data => '7002 04d2',
+    ),
+    t::MockServer::Sleep->new(
+     description => q{wait},
+     interval => 0.1,
+    ),
+    t::MockServer::Code->new(
+     description => q{sent},
+     code => sub { $sent->send(1) },
+    ),
+    t::MockServer::Receive->new(
+     description => q{pingreq trigger},
+     data => 'C0 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{pubrel},
+     data => '6002 04d2',
+    ),
+    t::MockServer::Sleep->new(
+     description => q{wait},
+     interval => 0.1,
+    ),
+    t::MockServer::Code->new(
+     description => q{sent},
+     code => sub { $sent->send(1) },
+    ),
    ],
   );
 
-my $cv = AnyEvent->condvar;
-
-eval { test_server($cv, @connections) };
+my $server;
+eval { $server = t::MockServer->new(@connections) };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
-my ($host,$port) = @{$cv->recv};
-my $addr = join ':', $host, $port;
+my ($host, $port) = $server->connect_address;
 
 plan tests => 10;
 
@@ -94,7 +105,7 @@ my $mqtt =
   AnyEvent::MQTT->new(host => $host, port => $port, client_id => 'acme_mqtt');
 
 ok($mqtt, 'instantiate AnyEvent::MQTT object');
-$cv = $mqtt->connect();
+my $cv = $mqtt->connect();
 is(test_warn(sub { $cv->recv }),
    'Unsupported message Connect/at-most-once MQIsdp/3/acme_mqtt',
    'received unsupported message');

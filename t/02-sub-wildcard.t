@@ -20,60 +20,74 @@ BEGIN {
   }
   import Test::More;
   use t::Helpers qw/:all/;
+  use t::MockServer;
 }
 
 my @connections =
   (
    [
-    {
-     desc => q{connect},
-     recv => '10 17
+    t::MockServer::Receive->new(
+     description => q{connect},
+     data => '10 17
               00 06 4D 51 49 73 64 70
               03 02 00 78
               00 09 61 63 6D 65 5F 6D 71 74 74',
-     send => '20 02 00 00',
-    },
-    {
-     desc => q{subscribe /t/+},
-     recv => '82 09 00 01 00 04 2F 74 2F 2B 00',
-     send => '90 03 00 01 00',
-    },
-    {
-     desc => q{subscribe /t/#},
-     recv => '82 09 00 02 00 04 2F 74 2F 23 00',
-     send => '90 03 00 02 00',
-    },
-    {
-     desc => q{subscribe /t/+/s},
-     recv => '82 0B 00 03 00 06 2F 74 2F 2B 2F 73 00',
-     send => '90 03 00 03 00',
-    },
-    {
-     desc => q{publish /t/a message1},
-     send => '30 0e 00 04 2f 74 2f 61 6d 65 73  73 61 67 65 31',
-    },
-    {
-     desc => q{pingreq trigger publish /t/a/s message2},
-     recv => 'C0 00',
-     send => '30 10 00 06 2f 74 2f 61 2f 73 6d 65 73  73 61 67 65 32',
-    },
+    ),
+    t::MockServer::Send->new(
+     description => q{connack},
+     data => '20020000',
+    ),
+    t::MockServer::Receive->new(
+     description => q{subscribe /t/+},
+     data => '82 09 00 01 00 04 2F 74 2F 2B 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{suback /t/+},
+     data => '90 03 00 01 00',
+    ),
+    t::MockServer::Receive->new(
+     description => q{subscribe /t/#},
+     data => '82 09 00 02 00 04 2F 74 2F 23 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{suback /t/#},
+     data => '90 03 00 02 00',
+    ),
+    t::MockServer::Receive->new(
+     description => q{subscribe /t/+/s},
+     data => '82 0B 00 03 00 06 2F 74 2F 2B 2F 73 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{suback /t/+/s},
+     data => '90 03 00 03 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{publish /t/a message1},
+     data => '30 0e 00 04 2f 74 2f 61 6d 65 73  73 61 67 65 31',
+    ),
+    t::MockServer::Receive->new(
+     description => q{pingreq trigger publish /t/a/s message2},
+     data => 'C0 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{pingreq trigger publish /t/a/s message2},
+     data => '30 10 00 06 2f 74 2f 61 2f 73 6d 65 73  73 61 67 65 32',
+    ),
    ],
   );
 
-my $cv = AnyEvent->condvar;
-
-eval { test_server($cv, @connections) };
+my $server;
+eval { $server = t::MockServer->new(@connections) };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
-my ($host,$port) = @{$cv->recv};
-my $addr = join ':', $host, $port;
+my ($host, $port) = $server->connect_address;
 
 plan tests => 17;
 
 use_ok('AnyEvent::MQTT');
 
 my $mqtt = AnyEvent::MQTT->new(host => $host, port => $port,
-                             client_id => 'acme_mqtt');
+                               client_id => 'acme_mqtt');
 
 ok($mqtt, 'instantiate AnyEvent::MQTT object');
 

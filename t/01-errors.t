@@ -8,6 +8,7 @@ use constant {
 };
 use Net::MQTT::Constants;
 use Errno qw/EPIPE/;
+use Scalar::Util qw/weaken/;
 
 $|=1;
 
@@ -20,7 +21,8 @@ BEGIN {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
   import Test::More;
-  use t::Helpers qw/:all/;
+  use t::Helpers qw/test_error/;
+  use t::MockServer;
 }
 
 my @connections =
@@ -28,32 +30,34 @@ my @connections =
    [
    ],
    [
-    {
-     desc => q{connect},
-     recv => '10 17
+    t::MockServer::Receive->new(
+     description => 'connect',
+     data => '10 17
               00 06 4D 51 49 73 64 70
               03 02 00 78
               00 09 61 63 6D 65 5F 6D 71 74 74',
-     sleep => 0.5,
-    },
+    ),
+    t::MockServer::Sleep->new(
+     description => 'connect timeout',
+     interval => 0.5,
+    ),
    ],
   );
 
-my $cv = AnyEvent->condvar;
-
-eval { test_server($cv, @connections) };
+my $server;
+eval { $server = t::MockServer->new(@connections) };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
-my ($host,$port) = @{$cv->recv};
-my $addr = join ':', $host, $port;
+my ($host, $port) = $server->connect_address;
 
-plan tests => 12;
+plan tests => 13;
 
 use_ok('AnyEvent::MQTT');
 
+my $cv;
 my $mqtt =
   AnyEvent::MQTT->new(host => $host, port => $port, client_id => 'acme_mqtt',
-                      on_error => sub { $cv->send($!{EPIPE}, @_); });
+                      on_error => sub { $cv->send($!{EPIPE}, @_) });
 
 ok($mqtt, 'instantiate AnyEvent::MQTT object for broken pipe test');
 $cv = $mqtt->connect();
@@ -89,3 +93,4 @@ $cv = $mqtt->connect();
 $cv->recv;
 is($error->[0], 0, 'connact timeout - not fatal');
 is($error->[1], 'connack timeout', 'connact timeout - message');
+

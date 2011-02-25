@@ -20,61 +20,72 @@ BEGIN {
   }
   import Test::More;
   use t::Helpers qw/:all/;
+  use t::MockServer;
 }
 
 my @connections =
   (
    [
-    {
-     desc => q{connect},
-     recv => '10 17
+    t::MockServer::Receive->new(
+     description => q{connect},
+     data => '10 17
               00 06 4D 51 49 73 64 70
               03 02 00 78
               00 09 61 63 6D 65 5F 6D 71 74 74',
-     send => '20 02 00 00',
-    },
-    {
-     desc => q{pingreq},
-     recv => 'C0 00',
-     send => 'D0 00',
-    },
-    {
-     desc => q{pingresp dup},
-     send => 'D0 00',
-    },
-    {
-     desc => q{pingreq timeout},
-     sleep => 0.5,
-    },
+    ),
+    t::MockServer::Send->new(
+     description => q{connack},
+     data => '20 02 00 00',
+    ),
+    t::MockServer::Receive->new(
+     description => q{pingreq},
+     data => 'C0 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{pingresp},
+     data => 'D0 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{pingresp dup},
+     data => 'D0 00',
+    ),
+    t::MockServer::Sleep->new(
+     description => q{pingreq timeout},
+     interval => 0.5,
+    ),
    ],
    [
-    {
-     desc => q{connect},
-     recv => '10 17
+    t::MockServer::Receive->new(
+     description => q{connect},
+     data => '10 17
               00 06 4D 51 49 73 64 70
               03 00 00 78
               00 09 61 63 6D 65 5F 6D 71 74 74',
-     send => '20 02 00 00',
-    },
-    {
-     desc => q{subscribe /t1},
-     recv => '82 08 00 01 00 03 2F 74 31 00',
-     send => '90 03 00 01 00',
-    },
-    {
-     desc => q{publish /t1 message1},
-     send => '30 0d 00 03 2f 74 31 6d 65 73  73 61 67 65 31',
-    },
+    ),
+    t::MockServer::Send->new(
+     description => q{connack},
+     data => '20 02 00 00',
+    ),
+    t::MockServer::Receive->new(
+     description => q{subscribe /t1},
+     data => '82 08 00 01 00 03 2F 74 31 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{suback /t1},
+     data => '90 03 00 01 00',
+    ),
+    t::MockServer::Send->new(
+     description => q{publish /t1 message1},
+     data => '30 0d 00 03 2f 74 31 6d 65 73  73 61 67 65 31',
+    ),
    ],
   );
 
-my $cv = AnyEvent->condvar;
-
-eval { test_server($cv, @connections) };
+my $server;
+eval { $server = t::MockServer->new(@connections) };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
-my ($host,$port) = @{$cv->recv};
-my $addr = join ':', $host, $port;
+my ($host, $port) = $server->connect_address;
 
 plan tests => 11;
 
@@ -84,7 +95,7 @@ my $mqtt =
   AnyEvent::MQTT->new(host => $host, port => $port, client_id => 'acme_mqtt');
 
 ok($mqtt, 'instantiate AnyEvent::MQTT object');
-$cv = $mqtt->connect();
+my $cv = $mqtt->connect();
 
 is($cv->recv, 1, '... connection handshake complete');
 $mqtt->{keep_alive_timer} = 0.2; # hack keep alive timer to avoid long test

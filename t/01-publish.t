@@ -22,7 +22,7 @@ BEGIN {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
   import Test::More;
-  use t::Helpers qw/:all/;
+  use t::MockServer;
 }
 
 my $published;
@@ -30,45 +30,55 @@ my $error;
 my @connections =
   (
    [
-    {
-     desc => q{connect},
-     recv => '10 17
+    t::MockServer::Receive->new(
+     description => 'connect',
+     data => '10 17
               00 06 4D 51 49 73 64 70
               03 02 00 78
               00 09 61 63 6D 65 5F 6D 71 74 74',
-     send => '20 02 00 00',
-    },
-    {
-     desc => q{publish},
-     recv => '30 0F
+    ),
+    t::MockServer::Send->new(
+     description => 'connack',
+     data => '20 02 00 00',
+    ),
+    t::MockServer::Receive->new(
+     description => q{publish},
+     data => '30 0F
               00 06 2F 74 6F 70 69 63
               6D 65 73 73 61 67 65',
-     send => sub { $published->send(1) },
-    },
-    {
-     desc => q{publish file handle},
-     recv => '30 10
+    ),
+    t::MockServer::Code->new(
+     description => q{published},
+     code => sub { $published->send(1) },
+    ),
+    t::MockServer::Receive->new(
+     description => q{publish file handle},
+     data => '30 10
               00 06 2F 74 6F 70 69 63
               6D 65 73 73 61 67 65 32',
-     send => sub { $published->send(2) },
-    },
-    {
-     desc => q{publish AnyEvent::Handle},
-     recv => '30 10
+    ),
+    t::MockServer::Code->new(
+     description => q{publish file handle done},
+     code => sub { $published->send(2) },
+    ),
+    t::MockServer::Receive->new(
+     description => q{publish AnyEvent::Handle},
+     data => '30 10
               00 06 2F 74 6F 70 69 63
               6D 65 73 73 61 67 65 33',
-     send => sub { $published->send(3) },
-    },
+    ),
+    t::MockServer::Code->new(
+     description => q{publish AnyEvent::Handle done},
+     code => sub { $published->send(3) },
+    ),
    ],
   );
 
-my $cv = AnyEvent->condvar;
-
-eval { test_server($cv, @connections) };
+my $server;
+eval { $server = t::MockServer->new(@connections) };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
-my ($host,$port) = @{$cv->recv};
-my $addr = join ':', $host, $port;
+my ($host, $port) = $server->connect_address;
 
 plan tests => 17;
 
@@ -80,7 +90,7 @@ my $mqtt = AnyEvent::MQTT->new(host => $host, port => $port,
 ok($mqtt, 'instantiate AnyEvent::MQTT object');
 
 $published = AnyEvent->condvar;
-$cv = AnyEvent->condvar;
+my $cv = AnyEvent->condvar;
 $mqtt->publish(message => 'message', topic => '/topic', cv => $cv);
 ok($cv, 'simple message publish');
 is($cv->recv, 1, '... client complete');
@@ -130,3 +140,4 @@ ok($pcv, 'publish AnyEvent::Handle');
 ok($eof->recv, '... expected broken pipe');
 ok($pcv->recv, '... client complete');
 is($published->recv, 3, '... server complete');
+
