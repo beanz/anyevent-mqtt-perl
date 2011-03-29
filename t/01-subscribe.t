@@ -49,7 +49,9 @@ my @connections =
     mocksend('90 03 00 03  00', q{pingreq trigger unsolicited suback}),
     mocksend('30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 34',
              q{publish /t1 message4}),
-    mockrecv('C0 00', q{pingreq trigger ...}),
+    mockrecv('A2 07 00 03  00 03 2F 74   31', q{unsubscribe /t1}),
+    mocksend('B0 02 00 10', q{unsolicited unsuback}),
+    mocksend('B0 02 00 03', q{unsuback /t1}),
    ],
   );
 
@@ -59,7 +61,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;
 
-plan tests => 21;
+plan tests => 28;
 
 use_ok('AnyEvent::MQTT');
 
@@ -138,3 +140,21 @@ is($t1_msg, '/t1 message4', '... /t1 message4');
 is($warn,
    q{SubAck with no pending subscription for message id: 3},
    '... unsolicited message warning');
+
+my $unsub_cv = $mqtt->unsubscribe(topic => '/t1');
+ok($unsub_cv, '... unsubscribe /t1');
+my $dup_unsub_cv = AnyEvent->condvar;
+$mqtt->unsubscribe(topic => '/t1',
+                   qos => MQTT_QOS_AT_MOST_ONCE,
+                   cv => $dup_unsub_cv);
+ok($dup_unsub_cv, '... dup unsubscribe /t1');
+my $unsub;
+$warn = test_warn(sub { $unsub = $unsub_cv->recv });
+is($warn,
+   q{UnSubAck with no pending unsubscribe for message id: 16},
+   '... unsolicited unsuback warning');
+ok($unsub, '... unsubcribed /t1');
+ok($dup_unsub_cv->recv, '... dup unsubscribe /t1');
+
+$unsub_cv = $mqtt->unsubscribe(topic => '/t1');
+ok(!$unsub_cv->recv, '... unsub with no sub');

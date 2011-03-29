@@ -360,7 +360,7 @@ sub subscribe {
 sub unsubscribe {
   my ($self, %p) = @_;
   my $topic = exists $p{topic} ? $p{topic} :
-    croak ref $self, '->subscribe requires "topic" parameter';
+    croak ref $self, '->unsubscribe requires "topic" parameter';
   my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
   my $cv = exists $p{cv} ? delete $p{cv} : AnyEvent->condvar;
   my $mid = $self->_remove_subscription($topic, $cv);

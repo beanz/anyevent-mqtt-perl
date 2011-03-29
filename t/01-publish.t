@@ -51,12 +51,16 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;
 
-plan tests => 17;
+plan tests => 18;
 
 use_ok('AnyEvent::MQTT');
 
+my @messages;
 my $mqtt = AnyEvent::MQTT->new(host => $host, port => $port,
-                               client_id => 'acme_mqtt');
+                               client_id => 'acme_mqtt',
+                               message_log_callback => sub {
+                                 push @messages, $_[0].' '.$_[1]->string;
+                               });
 
 ok($mqtt, 'instantiate AnyEvent::MQTT object');
 
@@ -112,3 +116,14 @@ ok($eof->recv, '... expected broken pipe');
 ok($pcv->recv, '... client complete');
 is($published->recv, 3, '... server complete');
 
+is_deeply(\@messages,
+          [
+           '> Connect/at-most-once MQIsdp/3/acme_mqtt ',
+           '< ConnAck/at-most-once Connection Accepted ',
+           "> Publish/at-most-once /topic \n".
+             '  6d 65 73 73 61 67 65                             message',
+           "> Publish/at-most-once /topic \n".
+             '  6d 65 73 73 61 67 65 32                          message2',
+           "> Publish/at-most-once /topic \n".
+             '  6d 65 73 73 61 67 65 33                          message3',
+          ], '... message log');

@@ -41,7 +41,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;
 
-plan tests => 13;
+plan tests => 14;
 
 use_ok('AnyEvent::MQTT');
 
@@ -60,6 +60,10 @@ like($error, qr/^Error: /, '... message');
 is(test_error(sub { $mqtt->subscribe }),
    'AnyEvent::MQTT->subscribe requires "topic" parameter',
    'subscribe w/o topic');
+
+is(test_error(sub { $mqtt->unsubscribe }),
+   'AnyEvent::MQTT->unsubscribe requires "topic" parameter',
+   'unsubscribe w/o topic');
 
 is(test_error(sub { $mqtt->subscribe(topic => '/test') }),
    'AnyEvent::MQTT->subscribe requires "callback" parameter',
