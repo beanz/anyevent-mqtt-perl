@@ -348,7 +348,7 @@ sub subscribe {
     croak ref $self, '->subscribe requires "callback" parameter';
   my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
   my $cv = exists $p{cv} ? delete $p{cv} : AnyEvent->condvar;
-  my $mid = $self->_add_subscription($topic, $sub, $cv);
+  my $mid = $self->_add_subscription($topic, $cv, $sub);
   if (defined $mid) { # not already subscribed/subscribing
     $self->_send(message_type => MQTT_SUBSCRIBE,
                  message_id => $mid,
@@ -358,7 +358,7 @@ sub subscribe {
 }
 
 sub _add_subscription {
-  my ($self, $topic, $sub, $cv) = @_;
+  my ($self, $topic, $cv, $sub) = @_;
   my $rec = $self->{_sub}->{$topic};
   if ($rec) {
     print STDERR "Add $sub to existing $topic subscription\n" if DEBUG;
