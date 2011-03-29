@@ -73,7 +73,7 @@ sub new {
       unless (@$con) {
         delete $self->{server};
       }
-      $self->handle_connection($handle, $actions);
+      $self->next_action($handle, $actions);
     }, sub {
       my ($fh, $host, $port) = @_;
       die "tcp_server setup failed: $!\n" unless ($fh);
@@ -113,7 +113,7 @@ sub connect_string {
   join ':', @{shift->connect_address}
 }
 
-sub handle_connection {
+sub next_action {
   my ($self, $handle, $actions) = @_;
   print STDERR 'In handle connection ', scalar @$actions, "\n" if DEBUG;
   my $action = shift @$actions;
@@ -136,7 +136,7 @@ sub mocksend {
     $send = pack 'H*', $send;
     print STDERR 'Sending ', length $send, " bytes\n" if DEBUG;
     $handle->push_write($send);
-    $server->handle_connection($handle, $actions);
+    $server->next_action($handle, $actions);
   }
 }
 
@@ -157,7 +157,7 @@ sub mockrecv {
                          my $got = uc unpack 'H*', $data;
                          is($got, $expect,
                             '... correct message received by server - '.$desc);
-                         $server->handle_connection($hdl, $actions);
+                         $server->next_action($hdl, $actions);
                          1;
                        });
   }
@@ -171,7 +171,7 @@ sub mocksleep {
     my $w;
     $w = AnyEvent->timer(after => $interval,
                          cb => sub {
-                           $server->handle_connection($handle, $actions);
+                           $server->next_action($handle, $actions);
                            undef $w;
                          });
   }
@@ -182,7 +182,7 @@ sub mockcode {
   sub {
     my ($server, $handle, $actions) = @_;
     $code->($server, $handle);
-    $server->handle_connection($handle, $actions);
+    $server->next_action($handle, $actions);
   }
 }
 
