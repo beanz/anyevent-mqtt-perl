@@ -357,6 +357,38 @@ sub subscribe {
   $cv
 }
 
+=method C<unsubscribe( %parameters )>
+
+This method unsubscribes to the given topic.  The parameter hash
+may contain values for the following keys:
+
+=over
+
+=item B<topic>
+
+  for the topic to subscribe to (this is required),
+
+=item B<callback>
+
+  for the callback to call with messages (this is optional and currently
+  not supported - all callbacks are unsubscribed),
+
+=item B<qos>
+
+  QoS level to use (default is MQTT_QOS_AT_MOST_ONCE),
+
+=item B<cv>
+
+  L<AnyEvent> condvar to use to signal the subscription is complete.
+  The received value will be the negotiated QoS level.
+
+=back
+
+This method returns the value of the B<cv> parameter if it was
+supplied or an L<AnyEvent> condvar created for this purpose.
+
+=cut
+
 sub unsubscribe {
   my ($self, %p) = @_;
   my $topic = exists $p{topic} ? $p{topic} :
