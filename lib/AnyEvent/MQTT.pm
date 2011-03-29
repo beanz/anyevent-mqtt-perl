@@ -799,6 +799,7 @@ sub anyevent_read_type {
   subname 'anyevent_read_type_reader' => sub {
     my ($handle) = @_;
     my $rbuf = \$handle->{rbuf};
+    weaken $rbuf;
     return unless (defined $$rbuf);
     while (1) {
       my $msg = Net::MQTT::Message->new_from_bytes($$rbuf, 1);
