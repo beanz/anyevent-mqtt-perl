@@ -103,6 +103,10 @@ it is set to 0 when reconnecting after an error.
 Sets the client id for the client overriding the default which
 is C<Net::MQTT::Message[NNNNN]> where NNNNN is the process id.
 
+=item C<message_log_callback>
+
+Defines a callback to call on every message.
+
 =back
 
 =cut
@@ -428,6 +432,7 @@ sub _write_now {
   }
   $self->_reset_keep_alive_timer();
   print STDERR "Sending: ", $msg->string, "\n" if DEBUG;
+  $self->{message_log_callback}->('>', $msg) if ($self->{message_log_callback});
   $self->{_waiting} = [$msg, $cv];
   print '  ', (unpack 'H*', $msg->bytes), "\n" if DEBUG;
   $self->{handle}->push_write($msg->bytes);
@@ -545,6 +550,7 @@ sub _handle_message {
   my $self = shift;
   my ($handle, $msg, $error) = @_;
   return $self->_error(0, $error, 1) if ($error);
+  $self->{message_log_callback}->('<', $msg) if ($self->{message_log_callback});
   my $method = lc ref $msg;
   $method =~ s/.*::/_process_/;
   unless ($self->can($method)) {
