@@ -1,0 +1,10 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use FindBin;
+use Test::Harness;
+my @files = @ARGV;
+@files = glob($FindBin::Bin.'/t/*.t') unless (@files);
+$ENV{ANYEVENT_MQTT_SERVER} = '127.0.0.1'
+  unless (exists $ENV{ANYEVENT_MQTT_SERVER});
+runtests(@files);
