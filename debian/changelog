@@ -7,7 +7,7 @@ libanyevent-mqtt-perl (1.110880-1) unstable; urgency=low
   * Avoid some cyclic references that lead to memory leaks.
   * Use Sub::Name to aid debugging of anonymous subroutines.
 
- -- Mark Hindess <soft-debian@temporalanomaly.com>  Tue, 29 Mar 2011 22:22:58 +0100
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Tue, 29 Mar 2011 22:23:16 +0100
 
 libanyevent-mqtt-perl (1.110390-1) unstable; urgency=low
 
