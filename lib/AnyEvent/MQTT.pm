@@ -357,6 +357,21 @@ sub subscribe {
   $cv
 }
 
+sub unsubscribe {
+  my ($self, %p) = @_;
+  my $topic = exists $p{topic} ? $p{topic} :
+    croak ref $self, '->subscribe requires "topic" parameter';
+  my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
+  my $cv = exists $p{cv} ? delete $p{cv} : AnyEvent->condvar;
+  my $mid = $self->_remove_subscription($topic, $cv);
+  if (defined $mid) { # not already subscribed/subscribing
+    $self->_send(message_type => MQTT_UNSUBSCRIBE,
+                 message_id => $mid,
+                 topics => [$topic]);
+  }
+  $cv
+}
+
 sub _add_subscription {
   my ($self, $topic, $cv, $sub) = @_;
   my $rec = $self->{_sub}->{$topic};
@@ -380,6 +395,28 @@ sub _add_subscription {
   $mid;
 }
 
+sub _remove_subscription {
+  my ($self, $topic, $cv, $sub) = @_;
+  my $rec = $self->{_unsub_pending}->{$topic};
+  if ($rec) {
+    print STDERR "Remove of $topic with pending unsubscribe\n" if DEBUG;
+    push @{$rec->{cv}}, $cv;
+    return;
+  }
+  $rec = $self->{_sub}->{$topic};
+  if ($rec) {
+    print STDERR "Remove of $topic\n" if DEBUG;
+    my $mid = $self->{message_id}++;
+    delete $self->{_sub}->{$topic};
+    $self->{_unsub_pending_by_message_id}->{$mid} = $topic;
+    $self->{_unsub_pending}->{$topic} = { cv => [ $cv ] };
+    return $mid;
+  }
+  print STDERR "Remove of $topic with no subscription\n" if DEBUG;
+  $cv->send(0);
+  return;
+}
+
 sub _confirm_subscription {
   my ($self, $mid, $qos) = @_;
   my $topic = delete $self->{_sub_pending_by_message_id}->{$mid};
@@ -399,6 +436,19 @@ sub _confirm_subscription {
 
   foreach my $cv (@{$rec->{cv}}) {
     $cv->send($qos);
+  }
+}
+
+sub _confirm_unsubscribe {
+  my ($self, $mid) = @_;
+  my $topic = delete $self->{_unsub_pending_by_message_id}->{$mid};
+  unless (defined $topic) {
+    carp 'UnSubAck with no pending unsubscribe for message id: ', $mid, "\n";
+    return;
+  }
+  my $rec = delete $self->{_unsub_pending}->{$topic};
+  foreach my $cv (@{$rec->{cv}}) {
+    $cv->send(1);
   }
 }
 
@@ -593,6 +643,13 @@ sub _process_suback {
   my ($self, $handle, $msg, $error) = @_;
   print STDERR "Confirmed subscription:\n", $msg->string('  '), "\n" if DEBUG;
   $self->_confirm_subscription($msg->message_id, $msg->qos_levels->[0]);
+  return
+}
+
+sub _process_unsuback {
+  my ($self, $handle, $msg, $error) = @_;
+  print STDERR "Confirmed unsubscribe:\n", $msg->string('  '), "\n" if DEBUG;
+  $self->_confirm_unsubscribe($msg->message_id);
   return
 }
 
