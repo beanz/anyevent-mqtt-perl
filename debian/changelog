@@ -1,3 +1,14 @@
+libanyevent-mqtt-perl (1.110880-1) unstable; urgency=low
+
+  * New script 'anyevent-mqtt-monitor' (requires Gtk2).
+  * Support for simple unsubscribe.
+  * New callback, 'message_log_callback', to log every incoming and
+    outgoing message.
+  * Avoid some cyclic references that lead to memory leaks.
+  * Use Sub::Name to aid debugging of anonymous subroutines.
+
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Tue, 29 Mar 2011 22:22:58 +0100
+
 libanyevent-mqtt-perl (1.110390-1) unstable; urgency=low
 
   * Add retain flag support.
