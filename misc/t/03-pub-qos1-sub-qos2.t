@@ -3,6 +3,7 @@ use warnings;
 use strict;
 use Test::More tests => 9;
 use AnyEvent::MQTT;
+use Net::MQTT::Constants;
 
 my $timeout = AnyEvent->timer(after => 5, cb => sub { die "timeout\n" });
 my ($test) = ($0 =~ m!([^/]+)$!);
@@ -20,10 +21,13 @@ ok(my $cv = $mqtt->connect, 'connect');
 ok($cv->recv, '...connected') or BAIL_OUT('simple connect failed');
 my $received = AnyEvent->condvar;
 ok($cv = $mqtt->subscribe(topic => $topic,
+                          qos => MQTT_QOS_EXACTLY_ONCE,
                           callback => sub { $received->send(\@_); }),
    'subscribe');
-is($cv->recv, 0, '...subscribed');
-ok($cv = $mqtt->publish(topic => $topic, message => 'just testing'), 'publish');
+is($cv->recv, 2, '...subscribed');
+ok($cv = $mqtt->publish(topic => $topic,
+                        qos => MQTT_QOS_AT_LEAST_ONCE,
+                        message => 'just testing'), 'publish');
 
 ok($cv->recv, '...published');
 my $res = $received->recv;
@@ -35,10 +39,12 @@ is_deeply(\@messages,
           [
            q{> Connect/at-most-once MQIsdp/3/}.$test.q{ },
            q{< ConnAck/at-most-once Connection Accepted },
-           q{> Subscribe/at-least-once 1 }.$topic.q{/at-most-once },
-           q{< SubAck/at-most-once 1/at-most-once },
-           q{> Publish/at-most-once }.$topic." \n".
+           q{> Subscribe/at-least-once 1 }.$topic.q{/exactly-once },
+           q{< SubAck/at-most-once 1/exactly-once },
+           q{> Publish/at-least-once }.$topic."/2 \n".
              q{  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing},
-           q{< Publish/at-most-once }.$topic." \n".
+           q{< PubAck/at-most-once 2 },
+           q{< Publish/at-least-once }.$topic."/1 \n".
              q{  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing},
+           q{> PubAck/at-most-once 1 },
           ], '...message log');

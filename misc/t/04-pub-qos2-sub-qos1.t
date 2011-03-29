@@ -5,6 +5,7 @@ use Test::More tests => 9;
 use AnyEvent::MQTT;
 use Net::MQTT::Constants;
 
+my $timeout = AnyEvent->timer(after => 5, cb => sub { die "timeout\n" });
 my ($test) = ($0 =~ m!([^/]+)$!);
 my $topic = '/zqk/test';
 my @messages;
