@@ -311,7 +311,7 @@ sub _send_with_ack {
 
 =method C<subscribe( %parameters )>
 
-This method is subscribes to the given topic.  The parameter hash
+This method subscribes to the given topic.  The parameter hash
 may contain values for the following keys:
 
 =over
