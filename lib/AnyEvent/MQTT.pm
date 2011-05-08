@@ -229,10 +229,7 @@ sub publish {
     print STDERR "publish: message[$message] => $topic\n" if DEBUG;
     $self->_send_with_ack({
                            message_type => MQTT_PUBLISH,
-                           qos => $qos,
-                           retain => $p{retain},
-                           topic => $topic,
-                           message => $message,
+                           %p,
                           }, $cv, $expect);
     return $cv;
   }
