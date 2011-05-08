@@ -293,8 +293,7 @@ sub _send_with_ack {
                           print ref $self, " timeout waiting for ",
                             message_type_string($expect), "\n" if DEBUG;
                           delete $self->{inflight}->{$mid};
-                          $self->_send_with_ack($args, $cv,
-                                                $expect, 1);
+                          $self->_send_with_ack($args, $cv, $expect, 1);
                         }),
                      };
                    });
