@@ -49,6 +49,6 @@ is_deeply(\@messages,
            q{< Publish/exactly-once }.$topic."/1 \n".
              q{  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing},
            q{> PubRec/at-most-once 1 },
-           q{< PubRel/at-most-once 1 },
+           q{< PubRel/at-least-once 1 },
            q{> PubComp/at-most-once 1 },
           ], '...message log');
