@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use warnings;
 use strict;
-use Test::More tests => 9;
+use Test::More tests => 16;
 use AnyEvent::MQTT;
 use Net::MQTT::Constants;
 
@@ -35,15 +35,31 @@ my ($topic_recv, $message) = @$res;
 is($topic_recv, $topic, '...topic');
 is($message, 'just testing', '...message');
 
-is_deeply(\@messages,
-          [
-           q{> Connect/at-most-once MQIsdp/3/}.$test.q{ },
-           q{< ConnAck/at-most-once Connection Accepted },
-           q{> Subscribe/at-least-once 1 }.$topic.q{/at-most-once },
-           q{< SubAck/at-most-once 1/at-most-once },
-           q{> Publish/at-least-once }.$topic."/2 \n".
-             q{  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing},
-           q{< PubAck/at-most-once 2 },
-           q{< Publish/at-most-once }.$topic." \n".
-             q{  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing},
-          ], '...message log');
+is(@messages, 7, 'message log');
+is(shift @messages, q{> Connect/at-most-once MQIsdp/3/}.$test.q{ },
+   '... connect');
+is(shift @messages, q{< ConnAck/at-most-once Connection Accepted },
+   '... connack');
+is(shift @messages, q{> Subscribe/at-least-once 1 }.$topic.q{/at-most-once },
+   '... subscribe');
+is(shift @messages, q{< SubAck/at-most-once 1/at-most-once },
+   '... suback');
+is(shift @messages,
+   q{> Publish/at-least-once }.$topic."/2 \n".
+     q{  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing},
+   '... publish');
+my $m = shift @messages;
+if ($m =~ qr!^< PubAck/!) {
+  diag('minor deviation from specified order');
+  is($m, q{< PubAck/at-most-once 2 }, '... puback');
+  is(shift @messages,
+     q{< Publish/at-most-once }.$topic." \n".
+       q{  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing},
+     '... publish');
+} else {
+  is($m,
+     q{< Publish/at-most-once }.$topic." \n".
+       q{  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing},
+     '... publish');
+  is(shift @messages, q{< PubAck/at-most-once 2 }, '... puback');
+}
