@@ -69,7 +69,7 @@ sub new {
            host => undef,
            port => '1883',
            timeout => 30,
-           message_id => 1,
+           _message_id => {},
            inflight => {},
            %p,
           }, $pkg;
@@ -160,7 +160,7 @@ sub _send_with_ack {
   my ($self, $client, $args, $cv, $expect, $dup) = @_;
   if ($args->{qos}) {
     unless (exists $args->{message_id}) {
-      $args->{message_id} = $self->{message_id}++;
+      $args->{message_id} = $self->_message_id($client);
     }
     my $mid = $args->{message_id};
     my $send_cv = AnyEvent->condvar;
@@ -187,6 +187,11 @@ sub _send_with_ack {
   }
   $args->{dup} = 1 if ($dup);
   return $self->_send(%$args);
+}
+
+sub _message_id {
+  my ($self, $client) = @_;
+  ++$self->{_message_id}->{$client};
 }
 
 sub _process_connect {
@@ -227,7 +232,7 @@ sub _process_publish {
     $self->_write($subclient,
                   message_type => MQTT_PUBLISH,
                   qos => ($msg->qos < $qos ? $msg->qos : $qos),
-                  message_id => $msg->message_id,
+                  message_id => $self->_message_id($subclient),
                   topic => $msg->topic,
                   message => $msg->message);
   }
@@ -240,7 +245,7 @@ sub _process_publish {
       $self->_write($subclient,
                     message_type => MQTT_PUBLISH,
                     qos => ($msg->qos < $qos ? $msg->qos : $qos),
-                    message_id => $msg->message_id,
+                    message_id => $self->_message_id($subclient),
                     topic => $msg->topic,
                     message => $msg->message);
     }
