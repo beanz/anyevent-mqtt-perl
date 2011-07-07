@@ -1,54 +1,40 @@
 #!/usr/bin/perl
 use warnings;
 use strict;
-use Test::More tests => 9;
-use AnyEvent::MQTT;
-use Net::MQTT::Constants;
+use Test::More tests => 21;
+use FindBin;
+use lib $FindBin::Bin;
+use Tester;
+Tester->run(\*DATA);
 
-my $timeout = AnyEvent->timer(after => 5, cb => sub { die "timeout\n" });
-my ($test) = ($0 =~ m!([^/]+)$!);
-my $topic = '/zqk/test';
-my @messages;
-my $mqtt = AnyEvent::MQTT->new(host => $ENV{ANYEVENT_MQTT_SERVER},
-                               on_error => sub {
-                                 warn $_[1], "\n"; die "\n" if ($_[0])
-                               },
-                               client_id => $test,
-                               message_log_callback => sub {
-                                 push @messages, $_[0].' '.$_[1]->string;
-                               });
-ok(my $cv = $mqtt->connect, 'connect');
-ok($cv->recv, '...connected') or BAIL_OUT('simple connect failed');
-my $received = AnyEvent->condvar;
-ok($cv = $mqtt->subscribe(topic => $topic,
-                          qos => MQTT_QOS_EXACTLY_ONCE,
-                          callback => sub { $received->send(\@_); }),
-   'subscribe');
-is($cv->recv, 2, '...subscribed');
-ok($cv = $mqtt->publish(topic => $topic,
-                        qos => MQTT_QOS_EXACTLY_ONCE,
-                        message => 'just testing'), 'publish');
-
-ok($cv->recv, '...published');
-my $res = $received->recv;
-my ($topic_recv, $message) = @$res;
-is($topic_recv, $topic, '...topic');
-is($message, 'just testing', '...message');
-
-is_deeply(\@messages,
-          [
-           q{> Connect/at-most-once MQIsdp/3/}.$test.q{ },
-           q{< ConnAck/at-most-once Connection Accepted },
-           q{> Subscribe/at-least-once 1 }.$topic.q{/exactly-once },
-           q{< SubAck/at-most-once 1/exactly-once },
-           q{> Publish/exactly-once }.$topic."/2 \n".
-             q{  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing},
-           q{< PubRec/at-most-once 2 },
-           q{> PubRel/at-least-once 2 },
-           q{< PubComp/at-most-once 2 },
-           q{< Publish/exactly-once }.$topic."/1 \n".
-             q{  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing},
-           q{> PubRec/at-most-once 1 },
-           q{< PubRel/at-least-once 1 },
-           q{> PubComp/at-most-once 1 },
-          ], '...message log');
+__DATA__
+{
+ "stream" :
+ [
+  { "action" : "connect" },
+  { "action" : "subscribe","arguments" : { "qos" : 2 },
+    "result" : "2", "cvname" : "subscribe-qos2" },
+  {
+   "action" : "publish", "arguments" : { "qos" : 2, "message" : "just testing" }
+  },
+  {
+   "action" : "wait", "for" : "subscribe-qos2",
+   "result" : { "topic" : "%topicpid%", "message" : "just testing" }
+  }
+ ],
+ "log" :
+ [
+  "> Connect/at-most-once MQIsdp/3/%testname% ",
+  "< ConnAck/at-most-once Connection Accepted ",
+  "> Subscribe/at-least-once 1 %topicpid%/exactly-once ",
+  "< SubAck/at-most-once 1/exactly-once ",
+  "> Publish/exactly-once %topicpid%/2 \n  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing",
+  "< PubRec/at-most-once 2 ",
+  "> PubRel/at-least-once 2 ",
+  "< PubComp/at-most-once 2 ",
+  "< Publish/exactly-once %topicpid%/1 \n  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing",
+  "> PubRec/at-most-once 1 ",
+  "< PubRel/at-least-once 1 ",
+  "> PubComp/at-most-once 1 "
+ ]
+}
