@@ -1,4 +1,6 @@
 package Tester;
+use strict;
+use warnings;
 
 use Test::More;
 use AnyEvent::MQTT;
@@ -63,6 +65,7 @@ sub run_stream {
   my $cv;
   my $mqtt;
   my %cv = ();
+  my %timer = ();
   my $index = 0;
   foreach my $index (0..-1+@$stream) {
     $conf->{index} = $index;
@@ -85,7 +88,7 @@ sub run_stream {
                                  );
       ok($cv = $mqtt->connect, 'connect - '.$name);
       ok($cv->recv, '...connected - '.$name)
-        or BAIL_OUT('simple connect failed');
+        or BAIL_OUT('connect failed');
     } elsif ($rec->{action} eq 'subscribe') {
       my $cvname = $rec->{cvname}||$name;
       $cv{$cvname} = AnyEvent->condvar;
@@ -99,6 +102,15 @@ sub run_stream {
 
       ok($cv = $mqtt->subscribe(%args), '...subscribe - '.$name);
       is($cv->recv, $rec->{result}, '...subscribed - '.$name);
+    } elsif ($rec->{action} eq 'unsubscribe') {
+      my %args =
+        (
+         topic => $conf->{topicpid},
+         %$args,
+        );
+
+      ok($cv = $mqtt->unsubscribe(%args), '...unsubscribe - '.$name);
+      is($cv->recv, $rec->{result}, '...unsubscribed - '.$name);
     } elsif ($rec->{action} eq 'publish') {
       my %args =
         (
@@ -111,10 +123,21 @@ sub run_stream {
       ok($cv->recv, '...published - '.$name);
     } elsif ($rec->{action} eq 'wait') {
       my $msg = $cv{$rec->{for}}->recv;
-      foreach my $k (sort keys %{$rec->{result}}) {
-        is($msg->$k, replace_conf($rec->{result}->{$k}, $conf),
-           '...result '.$k.' - '.$name);
+      my $result = $rec->{result};
+      if (ref $result) {
+        foreach my $k (sort keys %$result) {
+          is($msg->$k, replace_conf($result->{$k}, $conf),
+             '...result '.$k.' - '.$name);
+        }
+      } else {
+        is($msg, replace_conf($result, $conf),
+           '...result '.$result.' - '.$name);
       }
+    } elsif ($rec->{action} eq 'timeout') {
+      my $cvname = $rec->{cvname}||$name;
+      $cv{$cvname} = AnyEvent->condvar unless (exists $cv{$cvname});
+      $timer{$name} = AnyEvent->timer(after => $rec->{timeout},
+                      cb => sub { $cv{$cvname}->send("timeout") });
     } else {
       die "Invalid action: ", $rec->{action}, "\n";
     }
