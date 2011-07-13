@@ -15,7 +15,7 @@ SYNOPSIS
       my $qos = $cv->recv; # subscribed, negotiated QoS == $qos
 
       # publish a simple message
-      my $cv = $mqtt->publish(message => 'simple message',
+      $cv = $mqtt->publish(message => 'simple message',
                               topic => '/topic');
       $cv->recv; # sent
 
@@ -25,7 +25,7 @@ SYNOPSIS
       $cv->recv; # sent
 
       # publish from AnyEvent::Handle
-      $cv = $mqtt->publish(handle => AnyEvent::Handle->new(...),
+      $cv = $mqtt->publish(handle => AnyEvent::Handle->new(%handle_argss),
                            topic => '/topic');
       $cv->recv; # sent
 
