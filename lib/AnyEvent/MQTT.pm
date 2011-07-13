@@ -1,48 +1,12 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT;
+BEGIN {
+  $AnyEvent::MQTT::VERSION = '1.111940';
+}
 
 # ABSTRACT: AnyEvent module for an MQTT client
 
-=head1 SYNOPSIS
-
-  use AnyEvent::MQTT;
-  my $mqtt = AnyEvent::MQTT->new;
-  my $cv = $mqtt->subscribe(topic => '/topic',
-                            callback => sub {
-                                 my ($topic, $message) = @_;
-                                 print $topic, ' ', $message, "\n"
-                               });
-  my $qos = $cv->recv; # subscribed, negotiated QoS == $qos
-
-  # publish a simple message
-  my $cv = $mqtt->publish(message => 'simple message',
-                          topic => '/topic');
-  $cv->recv; # sent
-
-  # publish line-by-line from file handle
-  $cv =  $mqtt->publish(handle => \*STDIN,
-                        topic => '/topic');
-  $cv->recv; # sent
-
-  # publish from AnyEvent::Handle
-  $cv = $mqtt->publish(handle => AnyEvent::Handle->new(...),
-                       topic => '/topic');
-  $cv->recv; # sent
-
-=head1 DESCRIPTION
-
-AnyEvent module for MQTT client.
-
-B<IMPORTANT:> This is an early release and the API is still subject to
-change.
-
-=head1 DISCLAIMER
-
-This is B<not> official IBM code.  I work for IBM but I'm writing this
-in my spare time (with permission) for fun.
-
-=cut
 
 use constant DEBUG => $ENV{ANYEVENT_MQTT_DEBUG};
 use AnyEvent;
@@ -53,63 +17,6 @@ use Carp qw/croak carp/;
 use Sub::Name;
 use Scalar::Util qw/weaken/;
 
-=method C<new(%params)>
-
-Constructs a new C<AnyEvent::MQTT> object.  The supported parameters
-are:
-
-=over
-
-=item C<host>
-
-The server host.  Defaults to C<127.0.0.1>.
-
-=item C<port>
-
-The server port.  Defaults to C<1883>.
-
-=item C<timeout>
-
-The timeout for responses from the server.
-
-=item C<keep_alive_timer>
-
-The keep alive timer.
-
-=item C<will_topic>
-
-Set topic for will message.  Default is undef which means no will
-message will be configured.
-
-=item C<will_qos>
-
-Set QoS for will message.  Default is 'at-most-once'.
-
-=item C<will_retain>
-
-Set retain flag for will message.  Default is 0.
-
-=item C<will_message>
-
-Set message for will message.  Default is the empty message.
-
-=item C<clean_session>
-
-Set clean session flag for connect message.  Default is 1 but
-it is set to 0 when reconnecting after an error.
-
-=item C<client_id>
-
-Sets the client id for the client overriding the default which
-is C<Net::MQTT::Message[NNNNN]> where NNNNN is the process id.
-
-=item C<message_log_callback>
-
-Defines a callback to call on every message.
-
-=back
-
-=cut
 
 sub new {
   my ($pkg, %p) = @_;
@@ -141,12 +48,6 @@ sub DESTROY {
   $_[0]->cleanup;
 }
 
-=method C<cleanup()>
-
-This method attempts to destroy any resources in the event of a
-disconnection or fatal error.
-
-=cut
 
 sub cleanup {
   my $self = shift;
@@ -167,52 +68,6 @@ sub _error {
   $self->_reconnect() if ($reconnect);
 }
 
-=method C<publish( %parameters )>
-
-This method is used to publish to a given topic.  It returns an
-L<AnyEvent::condvar> which is notified when the publish is complete
-(written to the kernel or ack'd depending on the QoS level).  The
-parameter hash must included at least a B<topic> value and one of:
-
-=over
-
-=item B<message>
-
-  with a string value which is published to the topic,
-
-=item B<handle>
-
- the value of which must either be an L<AnyEvent::Handle> or will be
- passed to an L<AnyEvent::Handle> constructor as the C<fh> argument.
- The L<push_read()> method is called on the L<AnyEvent::Handle> with a
- callback that will publish each chunk read to the topic.
-
-=back
-
-The parameter hash may also keys for:
-
-=over
-
-=item C<qos>
-
-  to set the QoS level for published messages (default
-  MQTT_QOS_AT_MOST_ONCE),
-
-=item C<handle_args>
-
-  a reference to a list to pass as arguments to the
-  L<AnyEvent::Handle> constructor in the final case above (defaults to
-  an empty list reference), or
-
-=item C<push_read_args>
-
-  a reference to a list to pass as the arguments to the
-  L<AnyEvent::Handle#push_read> method (defaults to ['line'] to read,
-  and subsequently publish, a line at a time.
-
-=back
-
-=cut
 
 sub publish {
   my ($self, %p) = @_;
@@ -305,36 +160,6 @@ sub _send_with_ack {
   return $self->_send(%$args);
 }
 
-=method C<subscribe( %parameters )>
-
-This method subscribes to the given topic.  The parameter hash
-may contain values for the following keys:
-
-=over
-
-=item B<topic>
-
-  for the topic to subscribe to (this is required),
-
-=item B<callback>
-
-  for the callback to call with messages (this is required),
-
-=item B<qos>
-
-  QoS level to use (default is MQTT_QOS_AT_MOST_ONCE),
-
-=item B<cv>
-
-  L<AnyEvent> condvar to use to signal the subscription is complete.
-  The received value will be the negotiated QoS level.
-
-=back
-
-This method returns the value of the B<cv> parameter if it was
-supplied or an L<AnyEvent> condvar created for this purpose.
-
-=cut
 
 sub subscribe {
   my ($self, %p) = @_;
@@ -353,37 +178,6 @@ sub subscribe {
   $cv
 }
 
-=method C<unsubscribe( %parameters )>
-
-This method unsubscribes to the given topic.  The parameter hash
-may contain values for the following keys:
-
-=over
-
-=item B<topic>
-
-  for the topic to subscribe to (this is required),
-
-=item B<callback>
-
-  for the callback to call with messages (this is optional and currently
-  not supported - all callbacks are unsubscribed),
-
-=item B<qos>
-
-  QoS level to use (default is MQTT_QOS_AT_MOST_ONCE),
-
-=item B<cv>
-
-  L<AnyEvent> condvar to use to signal the subscription is complete.
-  The received value will be the negotiated QoS level.
-
-=back
-
-This method returns the value of the B<cv> parameter if it was
-supplied or an L<AnyEvent> condvar created for this purpose.
-
-=cut
 
 sub unsubscribe {
   my ($self, %p) = @_;
@@ -552,13 +346,6 @@ sub _keep_alive_received {
   $self->_reset_keep_alive_timer();
 }
 
-=method C<connect( [ $msg ] )>
-
-This method starts the connection to the server.  It will be called
-lazily when required publish or subscribe so generally is should not
-be necessary to call it directly.
-
-=cut
 
 sub connect {
   my ($self, $msg, $cv) = @_;
@@ -783,12 +570,6 @@ sub _process_pubcomp {
   return 1;
 }
 
-=method C<anyevent_read_type()>
-
-This method is used to register an L<AnyEvent::Handle> read type
-method to read MQTT messages.
-
-=cut
 
 sub anyevent_read_type {
   my ($handle, $cb) = @_;
@@ -808,9 +589,249 @@ sub anyevent_read_type {
 
 1;
 
+
+__END__
+=pod
+
+=head1 NAME
+
+AnyEvent::MQTT - AnyEvent module for an MQTT client
+
+=head1 VERSION
+
+version 1.111940
+
+=head1 SYNOPSIS
+
+  use AnyEvent::MQTT;
+  my $mqtt = AnyEvent::MQTT->new;
+  my $cv = $mqtt->subscribe(topic => '/topic',
+                            callback => sub {
+                                 my ($topic, $message) = @_;
+                                 print $topic, ' ', $message, "\n"
+                               });
+  my $qos = $cv->recv; # subscribed, negotiated QoS == $qos
+
+  # publish a simple message
+  my $cv = $mqtt->publish(message => 'simple message',
+                          topic => '/topic');
+  $cv->recv; # sent
+
+  # publish line-by-line from file handle
+  $cv =  $mqtt->publish(handle => \*STDIN,
+                        topic => '/topic');
+  $cv->recv; # sent
+
+  # publish from AnyEvent::Handle
+  $cv = $mqtt->publish(handle => AnyEvent::Handle->new(...),
+                       topic => '/topic');
+  $cv->recv; # sent
+
+=head1 DESCRIPTION
+
+AnyEvent module for MQTT client.
+
+B<IMPORTANT:> This is an early release and the API is still subject to
+change.
+
+=head1 METHODS
+
+=head2 C<new(%params)>
+
+Constructs a new C<AnyEvent::MQTT> object.  The supported parameters
+are:
+
+=over
+
+=item C<host>
+
+The server host.  Defaults to C<127.0.0.1>.
+
+=item C<port>
+
+The server port.  Defaults to C<1883>.
+
+=item C<timeout>
+
+The timeout for responses from the server.
+
+=item C<keep_alive_timer>
+
+The keep alive timer.
+
+=item C<will_topic>
+
+Set topic for will message.  Default is undef which means no will
+message will be configured.
+
+=item C<will_qos>
+
+Set QoS for will message.  Default is 'at-most-once'.
+
+=item C<will_retain>
+
+Set retain flag for will message.  Default is 0.
+
+=item C<will_message>
+
+Set message for will message.  Default is the empty message.
+
+=item C<clean_session>
+
+Set clean session flag for connect message.  Default is 1 but
+it is set to 0 when reconnecting after an error.
+
+=item C<client_id>
+
+Sets the client id for the client overriding the default which
+is C<Net::MQTT::Message[NNNNN]> where NNNNN is the process id.
+
+=item C<message_log_callback>
+
+Defines a callback to call on every message.
+
+=back
+
+=head2 C<cleanup()>
+
+This method attempts to destroy any resources in the event of a
+disconnection or fatal error.
+
+=head2 C<publish( %parameters )>
+
+This method is used to publish to a given topic.  It returns an
+L<AnyEvent::condvar> which is notified when the publish is complete
+(written to the kernel or ack'd depending on the QoS level).  The
+parameter hash must included at least a B<topic> value and one of:
+
+=over
+
+=item B<message>
+
+  with a string value which is published to the topic,
+
+=item B<handle>
+
+ the value of which must either be an L<AnyEvent::Handle> or will be
+ passed to an L<AnyEvent::Handle> constructor as the C<fh> argument.
+ The L<push_read()> method is called on the L<AnyEvent::Handle> with a
+ callback that will publish each chunk read to the topic.
+
+=back
+
+The parameter hash may also keys for:
+
+=over
+
+=item C<qos>
+
+  to set the QoS level for published messages (default
+  MQTT_QOS_AT_MOST_ONCE),
+
+=item C<handle_args>
+
+  a reference to a list to pass as arguments to the
+  L<AnyEvent::Handle> constructor in the final case above (defaults to
+  an empty list reference), or
+
+=item C<push_read_args>
+
+  a reference to a list to pass as the arguments to the
+  L<AnyEvent::Handle#push_read> method (defaults to ['line'] to read,
+  and subsequently publish, a line at a time.
+
+=back
+
+=head2 C<subscribe( %parameters )>
+
+This method subscribes to the given topic.  The parameter hash
+may contain values for the following keys:
+
+=over
+
+=item B<topic>
+
+  for the topic to subscribe to (this is required),
+
+=item B<callback>
+
+  for the callback to call with messages (this is required),
+
+=item B<qos>
+
+  QoS level to use (default is MQTT_QOS_AT_MOST_ONCE),
+
+=item B<cv>
+
+  L<AnyEvent> condvar to use to signal the subscription is complete.
+  The received value will be the negotiated QoS level.
+
+=back
+
+This method returns the value of the B<cv> parameter if it was
+supplied or an L<AnyEvent> condvar created for this purpose.
+
+=head2 C<unsubscribe( %parameters )>
+
+This method unsubscribes to the given topic.  The parameter hash
+may contain values for the following keys:
+
+=over
+
+=item B<topic>
+
+  for the topic to subscribe to (this is required),
+
+=item B<callback>
+
+  for the callback to call with messages (this is optional and currently
+  not supported - all callbacks are unsubscribed),
+
+=item B<qos>
+
+  QoS level to use (default is MQTT_QOS_AT_MOST_ONCE),
+
+=item B<cv>
+
+  L<AnyEvent> condvar to use to signal the subscription is complete.
+  The received value will be the negotiated QoS level.
+
+=back
+
+This method returns the value of the B<cv> parameter if it was
+supplied or an L<AnyEvent> condvar created for this purpose.
+
+=head2 C<connect( [ $msg ] )>
+
+This method starts the connection to the server.  It will be called
+lazily when required publish or subscribe so generally is should not
+be necessary to call it directly.
+
+=head2 C<anyevent_read_type()>
+
+This method is used to register an L<AnyEvent::Handle> read type
+method to read MQTT messages.
+
 =head1 DISCLAIMER
 
 This is B<not> official IBM code.  I work for IBM but I'm writing this
 in my spare time (with permission) for fun.
 
+=head1 DISCLAIMER
+
+This is B<not> official IBM code.  I work for IBM but I'm writing this
+in my spare time (with permission) for fun.
+
+=head1 AUTHOR
+
+Mark Hindess <soft-cpan@temporalanomaly.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Mark Hindess.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
 =cut
+

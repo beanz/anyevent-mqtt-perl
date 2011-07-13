@@ -1,28 +1,12 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT::Server;
+BEGIN {
+  $AnyEvent::MQTT::Server::VERSION = '1.111940';
+}
 
 # ABSTRACT: AnyEvent module for an MQTT server
 
-=head1 SYNOPSIS
-
-  use AnyEvent::MQTT::Server;
-  my $mqtt = AnyEvent::MQTT::Server->new;
-  $mqtt->all_cv->recv; # main loop
-
-=head1 DESCRIPTION
-
-AnyEvent module for MQTT server.
-
-B<IMPORTANT:> This is an early release and the API is still subject to
-change.
-
-=head1 DISCLAIMER
-
-This is B<not> official IBM code.  I work for IBM but I'm writing this
-in my spare time (with permission) for fun.
-
-=cut
 
 use constant DEBUG => $ENV{ANYEVENT_MQTT_DEBUG};
 use AnyEvent;
@@ -34,32 +18,6 @@ use Carp qw/croak carp/;
 use Sub::Name;
 use Scalar::Util qw/weaken/;
 
-=method C<new(%params)>
-
-Constructs a new C<AnyEvent::MQTT> object.  The supported parameters
-are:
-
-=over
-
-=item C<host>
-
-The server host.  Defaults to C<127.0.0.1>.
-
-=item C<port>
-
-The server port.  Defaults to C<1883>.
-
-=item C<timeout>
-
-The timeout for responses from the server.
-
-=item C<message_log_callback>
-
-Defines a callback to call on every message.
-
-=back
-
-=cut
 
 sub new {
   my ($pkg, %p) = @_;
@@ -86,12 +44,6 @@ sub DESTROY {
   $_[0]->cleanup;
 }
 
-=method C<cleanup()>
-
-This method attempts to destroy any resources in the event of a
-disconnection or fatal error.
-
-=cut
 
 sub cleanup {
   my $self = shift;
@@ -279,12 +231,6 @@ sub _write {
   $client->{handle}->push_write($msg->bytes);
 }
 
-=method C<anyevent_read_type()>
-
-This method is used to register an L<AnyEvent::Handle> read type
-method to read MQTT messages.
-
-=cut
 
 sub anyevent_read_type {
   my ($handle, $cb) = @_;
@@ -304,9 +250,88 @@ sub anyevent_read_type {
 
 1;
 
+
+__END__
+=pod
+
+=head1 NAME
+
+AnyEvent::MQTT::Server - AnyEvent module for an MQTT server
+
+=head1 VERSION
+
+version 1.111940
+
+=head1 SYNOPSIS
+
+  use AnyEvent::MQTT::Server;
+  my $mqtt = AnyEvent::MQTT::Server->new;
+  $mqtt->all_cv->recv; # main loop
+
+=head1 DESCRIPTION
+
+AnyEvent module for MQTT server.
+
+B<IMPORTANT:> This is an early release and the API is still subject to
+change.
+
+=head1 METHODS
+
+=head2 C<new(%params)>
+
+Constructs a new C<AnyEvent::MQTT> object.  The supported parameters
+are:
+
+=over
+
+=item C<host>
+
+The server host.  Defaults to C<127.0.0.1>.
+
+=item C<port>
+
+The server port.  Defaults to C<1883>.
+
+=item C<timeout>
+
+The timeout for responses from the server.
+
+=item C<message_log_callback>
+
+Defines a callback to call on every message.
+
+=back
+
+=head2 C<cleanup()>
+
+This method attempts to destroy any resources in the event of a
+disconnection or fatal error.
+
+=head2 C<anyevent_read_type()>
+
+This method is used to register an L<AnyEvent::Handle> read type
+method to read MQTT messages.
+
 =head1 DISCLAIMER
 
 This is B<not> official IBM code.  I work for IBM but I'm writing this
 in my spare time (with permission) for fun.
 
+=head1 DISCLAIMER
+
+This is B<not> official IBM code.  I work for IBM but I'm writing this
+in my spare time (with permission) for fun.
+
+=head1 AUTHOR
+
+Mark Hindess <soft-cpan@temporalanomaly.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Mark Hindess.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
 =cut
+

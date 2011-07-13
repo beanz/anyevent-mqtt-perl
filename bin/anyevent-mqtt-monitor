@@ -5,61 +5,6 @@ use warnings;
 # ABSTRACT: Perl script for subscribing to an MQTT topic
 # PODNAME: anyevent-mqtt-sub
 
-=head1 SYNOPSIS
-
-  anyevent-mqtt-sub [options] topic1 [topic2] [topic3] ...
-
-=head1 OPTIONS
-
-=over
-
-=item B<-help>
-
-Print a brief help message.
-
-=item B<-man>
-
-Print the manual page.
-
-=item B<-host A.B.C.D>
-
-The host running the MQTT service.  The default is C<127.0.0.1>.
-
-=item B<-port NNNNN>
-
-The port of the running MQTT service.  The default is 1883.
-
-=item B<-qos N>
-
-The QoS level for the published message.  The default is
-0 (C<MQTT_QOS_AT_MOST_ONCE>).
-
-=item B<-verbose>
-
-Include more verbose output.
-
-=item B<-keepalive NNN>
-
-The keep alive timer value.  Defaults to 120 seconds.  For simplicity,
-it is also currently used as the connection/subscription timeout.
-
-=item B<--history-size NNN>
-
-Number of messages to keep for each topic.  Defaults to keeping 20 messages.
-
-=item B<--no-retain>
-
-Ignore retained messages.  That is, wait for new messages rather than
-processing existing retained messages.
-
-=back
-
-=head1 DESCRIPTION
-
-This script subscribes to one or more MQTT topics and prints any
-messages that it receives to stdout.
-
-=cut
 
 use Gtk2 -init;
 use Gtk2::SimpleList;
@@ -302,6 +247,86 @@ sub dump_callback {
   print $d{hist_selected}->[0]->string, "\n";
 }
 
+
+__END__
+=pod
+
+=head1 NAME
+
+anyevent-mqtt-sub - Perl script for subscribing to an MQTT topic
+
+=head1 VERSION
+
+version 1.111940
+
+=head1 SYNOPSIS
+
+  anyevent-mqtt-sub [options] topic1 [topic2] [topic3] ...
+
+=head1 DESCRIPTION
+
+This script subscribes to one or more MQTT topics and prints any
+messages that it receives to stdout.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-help>
+
+Print a brief help message.
+
+=item B<-man>
+
+Print the manual page.
+
+=item B<-host A.B.C.D>
+
+The host running the MQTT service.  The default is C<127.0.0.1>.
+
+=item B<-port NNNNN>
+
+The port of the running MQTT service.  The default is 1883.
+
+=item B<-qos N>
+
+The QoS level for the published message.  The default is
+0 (C<MQTT_QOS_AT_MOST_ONCE>).
+
+=item B<-verbose>
+
+Include more verbose output.
+
+=item B<-keepalive NNN>
+
+The keep alive timer value.  Defaults to 120 seconds.  For simplicity,
+it is also currently used as the connection/subscription timeout.
+
+=item B<--history-size NNN>
+
+Number of messages to keep for each topic.  Defaults to keeping 20 messages.
+
+=item B<--no-retain>
+
+Ignore retained messages.  That is, wait for new messages rather than
+processing existing retained messages.
+
+=back
+
 =head1 SEE ALSO
 
 AnyEvent::MQTT(3)
+
+=head1 AUTHOR
+
+Mark Hindess <soft-cpan@temporalanomaly.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Mark Hindess.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
+
