@@ -16,7 +16,7 @@ package AnyEvent::MQTT;
   my $qos = $cv->recv; # subscribed, negotiated QoS == $qos
 
   # publish a simple message
-  my $cv = $mqtt->publish(message => 'simple message',
+  $cv = $mqtt->publish(message => 'simple message',
                           topic => '/topic');
   $cv->recv; # sent
 
@@ -26,7 +26,7 @@ package AnyEvent::MQTT;
   $cv->recv; # sent
 
   # publish from AnyEvent::Handle
-  $cv = $mqtt->publish(handle => AnyEvent::Handle->new(...),
+  $cv = $mqtt->publish(handle => AnyEvent::Handle->new(my %handle_args),
                        topic => '/topic');
   $cv->recv; # sent
 
@@ -170,9 +170,10 @@ sub _error {
 =method C<publish( %parameters )>
 
 This method is used to publish to a given topic.  It returns an
-L<AnyEvent::condvar> which is notified when the publish is complete
-(written to the kernel or ack'd depending on the QoS level).  The
-parameter hash must included at least a B<topic> value and one of:
+L<AnyEvent condvar|AnyEvent/"CONDITION VARIABLES"> which is notified
+when the publish is complete (written to the kernel or ack'd depending
+on the QoS level).  The parameter hash must included at least a
+B<topic> value and one of:
 
 =over
 
