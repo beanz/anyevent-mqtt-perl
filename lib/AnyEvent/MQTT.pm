@@ -700,9 +700,10 @@ disconnection or fatal error.
 =head2 C<publish( %parameters )>
 
 This method is used to publish to a given topic.  It returns an
-L<AnyEvent::condvar> which is notified when the publish is complete
-(written to the kernel or ack'd depending on the QoS level).  The
-parameter hash must included at least a B<topic> value and one of:
+L<AnyEvent condvar|AnyEvent/CONDITION VARIABLES> which is notified
+when the publish is complete (written to the kernel or ack'd depending
+on the QoS level).  The parameter hash must included at least a
+B<topic> value and one of:
 
 =over
 

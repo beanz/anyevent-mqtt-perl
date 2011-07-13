@@ -80,10 +80,10 @@ METHODS
     disconnection or fatal error.
 
   "publish( %parameters )"
-    This method is used to publish to a given topic. It returns an
-    AnyEvent::condvar which is notified when the publish is complete
-    (written to the kernel or ack'd depending on the QoS level). The
-    parameter hash must included at least a topic value and one of:
+    This method is used to publish to a given topic. It returns an AnyEvent
+    condvar which is notified when the publish is complete (written to the
+    kernel or ack'd depending on the QoS level). The parameter hash must
+    included at least a topic value and one of:
 
     message
           with a string value which is published to the topic,
