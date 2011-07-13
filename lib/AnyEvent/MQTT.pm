@@ -623,7 +623,7 @@ version 1.111940
   $cv->recv; # sent
 
   # publish from AnyEvent::Handle
-  $cv = $mqtt->publish(handle => AnyEvent::Handle->new(%handle_argss),
+  $cv = $mqtt->publish(handle => AnyEvent::Handle->new(my %handle_args),
                        topic => '/topic');
   $cv->recv; # sent
 

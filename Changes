@@ -1,6 +1,6 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
-1.111940  2011-07-13 21:51:13 Europe/London
+1.111940  2011-07-13 21:56:34 Europe/London
 
 1.110880  2011-03-29 22:23:16 Europe/London
     - New script 'anyevent-mqtt-monitor' (requires Gtk2).
