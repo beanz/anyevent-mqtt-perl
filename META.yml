@@ -3,6 +3,7 @@ abstract: 'AnyEvent module for an MQTT client'
 author:
   - 'Mark Hindess <soft-cpan@temporalanomaly.com>'
 build_requires:
+  AnyEvent::Socket: 0
   English: 0
   Errno: 0
   Exporter: 0
@@ -20,7 +21,6 @@ name: AnyEvent-MQTT
 requires:
   AnyEvent: 0
   AnyEvent::Handle: 0
-  AnyEvent::Socket: 0
   Carp: 0
   Getopt::Long: 0
   Net::MQTT::Constants: 0

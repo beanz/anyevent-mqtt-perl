@@ -17,7 +17,6 @@ debian/rules
 debian/watch
 dist.ini
 lib/AnyEvent/MQTT.pm
-lib/AnyEvent/MQTT/Server.pm
 misc/t/01-connect.t
 misc/t/02-pub-qos0-sub-qos0.t
 misc/t/02-pub-qos0-sub-qos1.t
