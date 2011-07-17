@@ -151,7 +151,13 @@ disconnection or fatal error.
 sub cleanup {
   my $self = shift;
   print STDERR "cleanup\n" if DEBUG;
-  $self->{handle}->destroy if ($self->{handle});
+  if ($self->{handle}) {
+    my $cv = AnyEvent->condvar;
+    my $handle = $self->{handle};
+    weaken $handle;
+    $cv->cb(sub { $handle->destroy });
+    $self->_send(message_type => MQTT_DISCONNECT, cv => $cv);
+  }
   delete $self->{handle};
   delete $self->{connected};
   delete $self->{wait};
