@@ -33,6 +33,10 @@
             "Scalar::Util" : 0,
             "Sub::Name" : 0,
             "constant" : 0
+         },
+         "suggests" : {
+            "Gtk2" : 0,
+            "Gtk2::SimpleList" : 0
          }
       },
       "test" : {
