@@ -814,10 +814,3 @@ sub anyevent_read_type {
 }
 
 1;
-
-=head1 DISCLAIMER
-
-This is B<not> official IBM code.  I work for IBM but I'm writing this
-in my spare time (with permission) for fun.
-
-=cut
