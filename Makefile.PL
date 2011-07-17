@@ -35,8 +35,6 @@ my %WriteMakefileArgs = (
     'AnyEvent::Socket' => '0',
     'Carp' => '0',
     'Getopt::Long' => '0',
-    'Gtk2' => '0',
-    'Gtk2::SimpleList' => '0',
     'Net::MQTT::Constants' => '0',
     'Net::MQTT::Message' => '0',
     'POSIX' => '0',
@@ -45,7 +43,7 @@ my %WriteMakefileArgs = (
     'Sub::Name' => '0',
     'constant' => '0'
   },
-  'VERSION' => '1.111980',
+  'VERSION' => '1.111981',
   'test' => {
     'TESTS' => 't/*.t'
   }
