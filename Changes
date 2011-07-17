@@ -1,6 +1,7 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+    - Fix PAUSE indexing problem.
 
 1.111980  2011-07-17 22:31:37 Europe/London
     - Add clean disconnect support.
