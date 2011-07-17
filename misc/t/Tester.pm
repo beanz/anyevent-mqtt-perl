@@ -1,4 +1,5 @@
-package Tester;
+package # Hide from PAUSE
+        Tester;
 use strict;
 use warnings;
 
