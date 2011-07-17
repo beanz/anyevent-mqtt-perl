@@ -1,6 +1,6 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
-1.111980  2011-07-17 22:22:01 Europe/London
+1.111980  2011-07-17 22:24:25 Europe/London
     - Add clean disconnect support.
     - Make Gtk2 modules suggested dependencies since only
       anyevent-mqtt-monitor requires them - thx to Roger Light for
