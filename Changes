@@ -1,5 +1,8 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
+1.111981  2011-07-17 22:54:00 Europe/London
+    - Fix PAUSE indexing problem.
+
 1.111980  2011-07-17 22:31:37 Europe/London
     - Add clean disconnect support.
     - Make Gtk2 modules suggested dependencies since only

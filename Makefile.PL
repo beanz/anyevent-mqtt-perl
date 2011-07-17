@@ -43,7 +43,7 @@ my %WriteMakefileArgs = (
     'Sub::Name' => '0',
     'constant' => '0'
   },
-  'VERSION' => '1.111980',
+  'VERSION' => '1.111981',
   'test' => {
     'TESTS' => 't/*.t'
   }

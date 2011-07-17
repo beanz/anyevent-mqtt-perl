@@ -2,7 +2,7 @@ NAME
     AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 VERSION
-    version 1.111980
+    version 1.111981
 
 SYNOPSIS
       use AnyEvent::MQTT;
@@ -159,10 +159,6 @@ METHODS
   "anyevent_read_type()"
     This method is used to register an AnyEvent::Handle read type method to
     read MQTT messages.
-
-DISCLAIMER
-    This is not official IBM code. I work for IBM but I'm writing this in my
-    spare time (with permission) for fun.
 
 DISCLAIMER
     This is not official IBM code. I work for IBM but I'm writing this in my

@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package AnyEvent::MQTT;
 BEGIN {
-  $AnyEvent::MQTT::VERSION = '1.111980';
+  $AnyEvent::MQTT::VERSION = '1.111981';
 }
 
 # ABSTRACT: AnyEvent module for an MQTT client
@@ -595,7 +595,6 @@ sub anyevent_read_type {
 
 1;
 
-
 __END__
 =pod
 
@@ -605,7 +604,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.111980
+version 1.111981
 
 =head1 SYNOPSIS
 
@@ -818,11 +817,6 @@ be necessary to call it directly.
 
 This method is used to register an L<AnyEvent::Handle> read type
 method to read MQTT messages.
-
-=head1 DISCLAIMER
-
-This is B<not> official IBM code.  I work for IBM but I'm writing this
-in my spare time (with permission) for fun.
 
 =head1 DISCLAIMER
 
