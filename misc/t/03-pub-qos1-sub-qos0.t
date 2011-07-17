@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 use warnings;
 use strict;
-use Test::More tests => 16;
 use FindBin;
 use lib $FindBin::Bin;
 use Tester;
@@ -35,14 +34,16 @@ __DATA__
     "log" :
     [
      "< PubAck/at-most-once 2 ",
-     "< Publish/at-most-once %topicpid% \n  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing"
+     "< Publish/at-most-once %topicpid% \n  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing",
+     "> Disconnect/at-most-once"
     ]
    },
    {
     "log" :
     [
      "< Publish/at-most-once %topicpid% \n  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing",
-     "< PubAck/at-most-once 2 "
+     "< PubAck/at-most-once 2 ",
+     "> Disconnect/at-most-once"
     ]
    }
   ]
