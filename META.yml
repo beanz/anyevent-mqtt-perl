@@ -34,4 +34,4 @@ resources:
   bugtracker: https://github.com/beanz/anyevent-mqtt-perl/issues
   homepage: http://search.cpan.org/dist/AnyEvent-MQTT/
   repository: git://github.com/beanz/anyevent-mqtt-perl.git
-version: 1.111980
+version: 1.111981
