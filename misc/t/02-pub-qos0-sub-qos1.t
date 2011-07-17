@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 use warnings;
 use strict;
-use Test::More tests => 15;
 use FindBin;
 use lib $FindBin::Bin;
 use Tester;
@@ -30,6 +29,7 @@ __DATA__
   "> Subscribe/at-least-once 1 %topicpid%/at-least-once ",
   "< SubAck/at-most-once 1/at-least-once ",
   "> Publish/at-most-once %topicpid% \n  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing",
-  "< Publish/at-most-once %topicpid% \n  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing"
+  "< Publish/at-most-once %topicpid% \n  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing",
+  "> Disconnect/at-most-once"
  ]
 }

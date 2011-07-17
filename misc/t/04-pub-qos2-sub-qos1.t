@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 use warnings;
 use strict;
-use Test::More tests => 19;
 use FindBin;
 use lib $FindBin::Bin;
 use Tester;
@@ -33,6 +32,7 @@ __DATA__
   "> PubRel/at-least-once 2 ",
   "< PubComp/at-most-once 2 ",
   "< Publish/at-least-once %topicpid%/1 \n  6a 75 73 74 20 74 65 73 74 69 6e 67              just testing",
-  "> PubAck/at-most-once 1 "
+  "> PubAck/at-most-once 1 ",
+  "> Disconnect/at-most-once"
  ]
 }

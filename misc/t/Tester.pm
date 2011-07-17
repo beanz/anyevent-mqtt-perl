@@ -58,6 +58,7 @@ sub run {
     #diag('waiting for child '.$pid);
     waitpid($pid, 0);
   }
+  done_testing();
 }
 
 sub run_stream {
@@ -165,7 +166,8 @@ sub check_log {
   } continue {
     $i++;
   }
-  is(@$log, 0, 'no extra messages');
+  is(@$log, 0, 'no extra messages') or
+    diag("Got:\n  ", (join "\n  ", @$log), "\n");
 }
 
 sub replace_conf {

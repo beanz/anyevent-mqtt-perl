@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package AnyEvent::MQTT;
 BEGIN {
-  $AnyEvent::MQTT::VERSION = '1.111940';
+  $AnyEvent::MQTT::VERSION = '1.111980';
 }
 
 # ABSTRACT: AnyEvent module for an MQTT client
@@ -52,7 +52,13 @@ sub DESTROY {
 sub cleanup {
   my $self = shift;
   print STDERR "cleanup\n" if DEBUG;
-  $self->{handle}->destroy if ($self->{handle});
+  if ($self->{handle}) {
+    my $cv = AnyEvent->condvar;
+    my $handle = $self->{handle};
+    weaken $handle;
+    $cv->cb(sub { $handle->destroy });
+    $self->_send(message_type => MQTT_DISCONNECT, cv => $cv);
+  }
   delete $self->{handle};
   delete $self->{connected};
   delete $self->{wait};
@@ -599,7 +605,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.111940
+version 1.111980
 
 =head1 SYNOPSIS
 
