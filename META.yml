@@ -1,0 +1,37 @@
+---
+abstract: 'AnyEvent module for an MQTT client'
+author:
+  - 'Mark Hindess <soft-cpan@temporalanomaly.com>'
+build_requires:
+  AnyEvent::Socket: 0
+  English: 0
+  Errno: 0
+  Exporter: 0
+  File::Temp: 0
+  Test::More: 0
+configure_requires:
+  ExtUtils::MakeMaker: 6.31
+dynamic_config: 0
+generated_by: 'Dist::Zilla version 4.200004, CPAN::Meta::Converter version 2.101670'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: AnyEvent-MQTT
+requires:
+  AnyEvent: 0
+  AnyEvent::Handle: 0
+  Carp: 0
+  Getopt::Long: 0
+  Net::MQTT::Constants: 0
+  Net::MQTT::Message: 0
+  POSIX: 0
+  Pod::Usage: 0
+  Scalar::Util: 0
+  Sub::Name: 0
+  constant: 0
+resources:
+  bugtracker: https://github.com/beanz/anyevent-mqtt-perl/issues
+  homepage: http://search.cpan.org/dist/AnyEvent-MQTT/
+  repository: git://github.com/beanz/anyevent-mqtt-perl.git
+version: 1.111980

@@ -5,76 +5,6 @@ use warnings;
 # ABSTRACT: Perl script for subscribing to an MQTT topic
 # PODNAME: anyevent-mqtt-sub
 
-=head1 SYNOPSIS
-
-  anyevent-mqtt-sub [options] topic1 [topic2] [topic3] ...
-
-=head1 OPTIONS
-
-=over
-
-=item B<-help>
-
-Print a brief help message.
-
-=item B<-man>
-
-Print the manual page.
-
-=item B<-host A.B.C.D>
-
-The host running the MQTT service.  The default is C<127.0.0.1>.
-
-=item B<-port NNNNN>
-
-The port of the running MQTT service.  The default is 1883.
-
-=item B<-qos N>
-
-The QoS level for the published message.  The default is
-0 (C<MQTT_QOS_AT_MOST_ONCE>).
-
-=item B<-verbose>
-
-Include more verbose output.  Without this option the script only
-outputs errors and received messages one per line in the form:
-
-  topic message
-
-With one B<-verbose> options, publish messages are printed in a form
-of a summary of the header fields and the payload in hex dump and text
-form.
-
-With two B<-verbose> options, summaries are printed for all messages
-sent and received.
-
-=item B<-keepalive NNN>
-
-The keep alive timer value.  Defaults to 120 seconds.  For simplicity,
-it is also currently used as the connection/subscription timeout.
-
-=item B<-count NNN>
-
-Read the specificed number of MQTT messages and then exit.  Default
-is 0 - read forever.
-
-=item B<-one> or B<-1>
-
-Short for B<-count 1>.  Read one message and exit.
-
-=item B<--no-retain>
-
-Ignore retained messages.  That is, wait for new messages rather than
-processing existing retained messages.
-
-=back
-
-=head1 DESCRIPTION
-
-This script subscribes to one or more MQTT topics and prints any
-messages that it receives to stdout.
-
-=cut
 
 use Net::MQTT::Constants;
 use AnyEvent::MQTT;
@@ -136,6 +66,87 @@ sub output {
   }
 }
 
+
+__END__
+=pod
+
+=head1 NAME
+
+anyevent-mqtt-sub - Perl script for subscribing to an MQTT topic
+
+=head1 VERSION
+
+version 1.111980
+
+=head1 SYNOPSIS
+
+  anyevent-mqtt-sub [options] topic1 [topic2] [topic3] ...
+
+=head1 DESCRIPTION
+
+This script subscribes to one or more MQTT topics and prints any
+messages that it receives to stdout.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-help>
+
+Print a brief help message.
+
+=item B<-man>
+
+Print the manual page.
+
+=item B<-host A.B.C.D>
+
+The host running the MQTT service.  The default is C<127.0.0.1>.
+
+=item B<-port NNNNN>
+
+The port of the running MQTT service.  The default is 1883.
+
+=item B<-qos N>
+
+The QoS level for the published message.  The default is
+0 (C<MQTT_QOS_AT_MOST_ONCE>).
+
+=item B<-verbose>
+
+Include more verbose output.  Without this option the script only
+outputs errors and received messages one per line in the form:
+
+  topic message
+
+With one B<-verbose> options, publish messages are printed in a form
+of a summary of the header fields and the payload in hex dump and text
+form.
+
+With two B<-verbose> options, summaries are printed for all messages
+sent and received.
+
+=item B<-keepalive NNN>
+
+The keep alive timer value.  Defaults to 120 seconds.  For simplicity,
+it is also currently used as the connection/subscription timeout.
+
+=item B<-count NNN>
+
+Read the specificed number of MQTT messages and then exit.  Default
+is 0 - read forever.
+
+=item B<-one> or B<-1>
+
+Short for B<-count 1>.  Read one message and exit.
+
+=item B<--no-retain>
+
+Ignore retained messages.  That is, wait for new messages rather than
+processing existing retained messages.
+
+=back
+
 =head1 SEE ALSO
 
 AnyEvent::MQTT(3)
@@ -145,4 +156,16 @@ AnyEvent::MQTT(3)
 This is B<not> official IBM code.  I work for IBM but I'm writing this
 in my spare time (with permission) for fun.
 
+=head1 AUTHOR
+
+Mark Hindess <soft-cpan@temporalanomaly.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Mark Hindess.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
 =cut
+

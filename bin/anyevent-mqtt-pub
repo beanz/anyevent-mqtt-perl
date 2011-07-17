@@ -5,61 +5,6 @@ use warnings;
 # ABSTRACT: Perl script for publishing to an MQTT topic
 # PODNAME: anyevent-mqtt-pub
 
-=head1 SYNOPSIS
-
-  # messages one per line on stdin
-  echo message | anyevent-mqtt-pub [options] topic
-
-  # message as command line arguments
-  anyevent-mqtt-pub [options] topic this is a message
-
-=head1 OPTIONS
-
-=over
-
-=item B<-help>
-
-Print a brief help message.
-
-=item B<-man>
-
-Print the manual page.
-
-=item B<-host A.B.C.D>
-
-The host running the MQTT service.  The default is C<127.0.0.1>.
-
-=item B<-port NNNNN>
-
-The port of the running MQTT service.  The default is 1883.
-
-=item B<-qos N>
-
-The QoS level for the published message.  The default is
-0 (C<MQTT_QOS_AT_MOST_ONCE>).
-
-=item B<-verbose>
-
-Include more verbose output.  Without this option the script only
-outputs errors
-
-=item B<-keepalive NNN>
-
-The keep alive timer value.  Defaults to 120 seconds.  For simplicity,
-it is also currently used as the connection timeout.
-
-=item B<-retain>
-
-Set the retain flag on the message.  Default is not set.
-
-=back
-
-=head1 DESCRIPTION
-
-This script publishes each line from stdin as an MQTT message on the
-given topic.
-
-=cut
 
 use strict;
 use Net::MQTT::Constants;
@@ -110,6 +55,72 @@ if (@ARGV) {
 $condvar = $mqtt->publish(%args);
 $condvar->recv;
 
+
+__END__
+=pod
+
+=head1 NAME
+
+anyevent-mqtt-pub - Perl script for publishing to an MQTT topic
+
+=head1 VERSION
+
+version 1.111980
+
+=head1 SYNOPSIS
+
+  # messages one per line on stdin
+  echo message | anyevent-mqtt-pub [options] topic
+
+  # message as command line arguments
+  anyevent-mqtt-pub [options] topic this is a message
+
+=head1 DESCRIPTION
+
+This script publishes each line from stdin as an MQTT message on the
+given topic.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-help>
+
+Print a brief help message.
+
+=item B<-man>
+
+Print the manual page.
+
+=item B<-host A.B.C.D>
+
+The host running the MQTT service.  The default is C<127.0.0.1>.
+
+=item B<-port NNNNN>
+
+The port of the running MQTT service.  The default is 1883.
+
+=item B<-qos N>
+
+The QoS level for the published message.  The default is
+0 (C<MQTT_QOS_AT_MOST_ONCE>).
+
+=item B<-verbose>
+
+Include more verbose output.  Without this option the script only
+outputs errors
+
+=item B<-keepalive NNN>
+
+The keep alive timer value.  Defaults to 120 seconds.  For simplicity,
+it is also currently used as the connection timeout.
+
+=item B<-retain>
+
+Set the retain flag on the message.  Default is not set.
+
+=back
+
 =head1 SEE ALSO
 
 AnyEvent::MQTT(3)
@@ -119,4 +130,16 @@ AnyEvent::MQTT(3)
 This is B<not> official IBM code.  I work for IBM but I'm writing this
 in my spare time (with permission) for fun.
 
+=head1 AUTHOR
+
+Mark Hindess <soft-cpan@temporalanomaly.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Mark Hindess.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
 =cut
+
