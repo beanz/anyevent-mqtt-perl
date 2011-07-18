@@ -143,6 +143,17 @@ sub run_stream {
       $cv{$cvname} = AnyEvent->condvar unless (exists $cv{$cvname});
       $timer{$name} = AnyEvent->timer(after => $rec->{timeout},
                       cb => sub { $cv{$cvname}->send("timeout") });
+    } elsif ($rec->{action} eq 'send') {
+      ok($cv = $mqtt->_send(%$args, cv => AnyEvent->condvar),
+         '...send - '.$name);
+      ok($cv->recv, '...sent - '.$name);
+      my $cvname = $rec->{cvname}||$name;
+      $cv{$cvname} = AnyEvent->condvar;
+      $mqtt->{before_pingresp_callback} =
+        sub {
+          $cv{$cvname}->send($_[0]);
+          delete $mqtt->{before_pingresp_callback};
+        };
     } else {
       die "Invalid action: ", $rec->{action}, "\n";
     }
