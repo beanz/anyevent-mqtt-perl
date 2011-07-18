@@ -266,7 +266,8 @@ sub _process_puback {
 sub _process_pingreq {
   my ($self, $client, $handle, $msg) = @_;
   print STDERR "pingreq ", $client->{name}, " ", $msg, "\n" if DEBUG;
-  $self->_write($client, message_type => MQTT_PINGRESP);
+  $self->_write($client, message_type => MQTT_PINGRESP,
+                         remaining => $msg->remaining);
 }
 
 sub _write {
