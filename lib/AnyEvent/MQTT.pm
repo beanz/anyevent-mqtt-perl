@@ -636,13 +636,25 @@ sub _handle_message {
   my ($handle, $msg, $error) = @_;
   return $self->_error(0, $error, 1) if ($error);
   $self->{message_log_callback}->('<', $msg) if ($self->{message_log_callback});
-  my $method = lc ref $msg;
-  $method =~ s/.*::/_process_/;
+  $self->_call_callback('before_msg_callback' => $msg) or return;
+  my $msg_type = lc ref $msg;
+  $msg_type =~ s/^.*:://;
+  $self->_call_callback('before_'.$msg_type.'_callback' => $msg) or return;
+  my $method = '_process_'.$msg_type;
   unless ($self->can($method)) {
     carp 'Unsupported message ', $msg->string(), "\n";
     return;
   }
-  $self->$method(@_);
+  my $res = $self->$method(@_);
+  $self->_call_callback('after_'.$msg_type.'_callback' => $msg, $res);
+  $res;
+}
+
+sub _call_callback {
+  my $self = shift;
+  my $cb_name = shift;
+  return 1 unless (exists $self->{$cb_name});
+  $self->{$cb_name}->(@_);
 }
 
 sub _process_connack {
