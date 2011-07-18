@@ -149,10 +149,11 @@ sub run_stream {
       ok($cv->recv, '...sent - '.$name);
       my $cvname = $rec->{cvname}||$name;
       $cv{$cvname} = AnyEvent->condvar;
-      $mqtt->{before_pingresp_callback} =
+      my $callback = 'before_'.($rec->{response}||'msg').'_callback';
+      $mqtt->{$callback} =
         sub {
           $cv{$cvname}->send($_[0]);
-          delete $mqtt->{before_pingresp_callback};
+          delete $mqtt->{$callback};
         };
     } else {
       die "Invalid action: ", $rec->{action}, "\n";
