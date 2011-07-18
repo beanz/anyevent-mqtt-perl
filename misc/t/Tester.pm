@@ -58,6 +58,9 @@ sub run {
   foreach my $pid (@pids) {
     #diag('waiting for child '.$pid);
     waitpid($pid, 0);
+    if ($?) {
+      die "child died: ", ($?>>8), "\n";
+    }
   }
   done_testing();
 }
