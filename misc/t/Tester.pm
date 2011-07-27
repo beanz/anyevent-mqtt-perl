@@ -2,6 +2,12 @@ package # Hide from PAUSE
         Tester;
 use strict;
 use warnings;
+use constant {
+  SERVER => $ENV{ANYEVENT_MQTT_SERVER} || 'localhost',
+  JOBS => $ENV{ANYEVENT_MQTT_TESTER_JOBS},
+  REPEAT => $ENV{ANYEVENT_MQTT_TESTER_REPEAT} || 1,
+  DIAG => $ENV{ANYEVENT_MQTT_TESTER_DIAG},
+};
 
 use Test::More;
 use AnyEvent::MQTT;
@@ -19,47 +25,51 @@ sub run {
   my $conf = $data->{config} || {};
   my $streams = $data->{streams} || [ $data->{stream} ];
   my $logs = $data->{logs} || [ $data->{log} ];
-  if ($conf->{repeat}) {
-    my $new = [];
-    push @$new, @$streams foreach (1..$conf->{repeat});
-    $streams = $new;
-    $new = [];
-    push @$new, @$logs foreach (1..$conf->{repeat});
-    $logs = $new;
-  }
+  $conf->{jobs} ||= JOBS || 1;
+  my $new = [];
+  push @$new, @$streams foreach (1..$conf->{jobs});
+  $streams = $new;
+  $new = [];
+  push @$new, @$logs foreach (1..$conf->{jobs});
+  $logs = $new;
+
   $conf->{topic} ||= '/zqk/test';
-  $conf->{host} ||= $ENV{ANYEVENT_MQTT_SERVER} || 'localhost';
-  $conf->{timeout} ||= 5;
+  $conf->{host} ||= SERVER;
+  $conf->{repeat} ||= REPEAT;
+  $conf->{timeout} ||= 5 * $conf->{repeat};
   my ($test) = ($0 =~ m!([^/]+)\.t$!);
   $conf->{testname} ||= $test;
 
   my $timeout = AnyEvent->timer(after => $conf->{timeout},
                                 cb => sub { die "timeout\n" });
 
-  my @pids;
-  foreach my $i (0..(@$streams-1)) {
-    my $pid = fork;
-    die "Fork failed\n" unless (defined $pid);
-    if ($pid) {
-      push @pids, $pid;
-      next;
-    }
-    #diag('child '.$i);
-    my @log;
-    $conf->{pid} = $i;
-    $conf->{testname} .= '.'.$i;
-    $conf->{topicpid} = $conf->{topic}.'/'.$i;
-    run_stream($conf, $streams->[$i], \@log);
-    check_log($conf, $logs->[$i], \@log);
-    #diag('child '.$i.' finished');
-    exit;
-  }
+  foreach my $n (0..($conf->{repeat}-1)) {
 
-  foreach my $pid (@pids) {
-    #diag('waiting for child '.$pid);
-    waitpid($pid, 0);
-    if ($?) {
-      die "child died: ", ($?>>8), "\n";
+    my @pids;
+    foreach my $i (0..(@$streams-1)) {
+      my $pid = fork;
+      die "Fork failed\n" unless (defined $pid);
+      if ($pid) {
+        push @pids, $pid;
+        next;
+      }
+      #diag('child '.$i);
+      my @log;
+      $conf->{pid} = $i;
+      $conf->{testname} .= '.'.$n.'.'.$i;
+      $conf->{topicpid} = $conf->{topic}.'/'.$i;
+      run_stream($conf, $streams->[$i], \@log);
+      check_log($conf, $logs->[$i], \@log);
+      #diag('child '.$i.' finished');
+      exit;
+    }
+
+    foreach my $pid (@pids) {
+      #diag('waiting for child '.$pid);
+      waitpid($pid, 0);
+      if ($?) {
+        die "child died: ", ($?>>8), "\n";
+      }
     }
   }
   done_testing();
@@ -170,7 +180,7 @@ sub check_log {
       foreach my $alt (@$m) {
         my $re = $alt->{re};
         if (!defined $re || $log->[0] =~ m!$re!) {
-          diag($alt->{diag}) if (exists $alt->{diag});
+          diag($alt->{diag}) if (DIAG && exists $alt->{diag});
           return check_log($conf, $alt->{log}, $log);
         }
       }
