@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use constant {
   SERVER => $ENV{ANYEVENT_MQTT_SERVER} || 'localhost',
-  JOBS => $ENV{ANYEVENT_MQTT_TESTER_JOBS},
+  JOBS => $ENV{ANYEVENT_MQTT_TESTER_JOBS} || 1,
   REPEAT => $ENV{ANYEVENT_MQTT_TESTER_REPEAT} || 1,
   DIAG => $ENV{ANYEVENT_MQTT_TESTER_DIAG},
 };
@@ -25,7 +25,7 @@ sub run {
   my $conf = $data->{config} || {};
   my $streams = $data->{streams} || [ $data->{stream} ];
   my $logs = $data->{logs} || [ $data->{log} ];
-  $conf->{jobs} ||= JOBS || 1;
+  $conf->{jobs} ||= JOBS;
   my $new = [];
   push @$new, @$streams foreach (1..$conf->{jobs});
   $streams = $new;
