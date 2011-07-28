@@ -202,6 +202,14 @@ sub _process_connect {
   $self->_write($client, message_type => MQTT_CONNACK);
 }
 
+sub _process_disconnect {
+  my ($self, $client, $handle, $msg) = @_;
+  print STDERR "disconnect ", $client->{addr}, " / ", $client->{name}, "\n"
+    if DEBUG;
+  delete $self->{_client}->{$handle};
+  $handle->destroy;
+}
+
 sub _process_subscribe {
   my ($self, $client, $handle, $msg) = @_;
   print STDERR "subscribe ", $client->{name}, " ", $msg, "\n" if DEBUG;
