@@ -223,6 +223,26 @@ sub _process_subscribe {
                 qos_levels => \@qos);
 }
 
+sub _process_unsubscribe {
+  my ($self, $client, $handle, $msg) = @_;
+  print STDERR "unsubscribe ", $client->{name}, " ", $msg, "\n" if DEBUG;
+  foreach my $topic (@{$msg->topics}) {
+    my $re = topic_to_regexp($topic); # convert MQTT pattern to regexp
+    if ($re) {
+      delete $self->{_subre}->{$topic}->{c}->{$client};
+      delete $self->{_subre}->{$topic}
+        unless (keys %{$self->{_subre}->{$topic}->{c}});
+    } else {
+      delete $self->{_sub}->{$topic}->{$client};
+      delete $self->{_sub}->{$topic}
+        unless (keys %{$self->{_sub}->{$topic}});
+    }
+  }
+  $self->_write($client,
+                message_type => MQTT_UNSUBACK,
+                message_id => $msg->message_id);
+}
+
 sub _process_publish {
   my ($self, $client, $handle, $msg) = @_;
   print STDERR "publish ", $client->{name}, " ", $msg, "\n" if DEBUG;
