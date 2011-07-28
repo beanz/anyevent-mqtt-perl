@@ -206,14 +206,20 @@ sub _process_subscribe {
   my ($self, $client, $handle, $msg) = @_;
   print STDERR "subscribe ", $client->{name}, " ", $msg, "\n" if DEBUG;
   my @qos = ();
+  my @retained = ();
   foreach my $rec (@{$msg->topics}) {
     my ($topic, $qos) = @$rec;
     my $re = topic_to_regexp($topic); # convert MQTT pattern to regexp
     if ($re) {
       $self->{_subre}->{$topic}->{re} = $re;
       $self->{_subre}->{$topic}->{c}->{$client} = [$client, $qos];
+      foreach my $topic (keys %{$self->{_retained}}) {
+        push @retained, [$self->{_retained}->{$topic}, $qos] if ($topic =~ $re);
+      }
     } else {
       $self->{_sub}->{$topic}->{$client} = [$client, $qos];
+      push @retained, [$self->{_retained}->{$topic}, $qos]
+        if (exists $self->{_retained}->{$topic});
     }
     push @qos, $qos;
   }
@@ -221,6 +227,16 @@ sub _process_subscribe {
                 message_type => MQTT_SUBACK,
                 message_id => $msg->message_id,
                 qos_levels => \@qos);
+  foreach my $rec (@retained) {
+    my ($msg, $qos) = @$rec;
+    $self->_write($client,
+                  message_type => MQTT_PUBLISH,
+                  qos => ($msg->qos < $qos ? $msg->qos : $qos),
+                  message_id => $self->_message_id($client),
+                  topic => $msg->topic,
+                  message => $msg->message,
+                  retain => 1);
+  }
 }
 
 sub _process_unsubscribe {
@@ -247,6 +263,16 @@ sub _process_publish {
   my ($self, $client, $handle, $msg) = @_;
   print STDERR "publish ", $client->{name}, " ", $msg, "\n" if DEBUG;
   my $topic = $msg->topic;
+  my $message = $msg->message;
+  if ($msg->retain) {
+    if ($message eq '') {
+      delete $self->{_retained}->{$msg->topic};
+      print STDERR "  retained cleared\n" if DEBUG;
+    } else {
+      $self->{_retained}->{$msg->topic} = $msg;
+      print STDERR "  retained '", $msg->message, "'\n" if DEBUG;
+    }
+  }
   foreach my $c (keys %{$self->{_sub}->{$topic}||{}}) {
     my ($subclient, $qos) = @{$self->{_sub}->{$topic}->{$c}};
     $self->_write($subclient,
@@ -254,7 +280,8 @@ sub _process_publish {
                   qos => ($msg->qos < $qos ? $msg->qos : $qos),
                   message_id => $self->_message_id($subclient),
                   topic => $msg->topic,
-                  message => $msg->message);
+                  message => $message,
+                  retain => $msg->retain);
   }
   foreach my $topic (keys %{$self->{_subre}||{}}) {
     my $rec = $self->{_subre}->{$topic};
@@ -267,7 +294,8 @@ sub _process_publish {
                     qos => ($msg->qos < $qos ? $msg->qos : $qos),
                     message_id => $self->_message_id($subclient),
                     topic => $msg->topic,
-                    message => $msg->message);
+                    message => $message,
+                    retain => $msg->retain);
     }
   }
 
