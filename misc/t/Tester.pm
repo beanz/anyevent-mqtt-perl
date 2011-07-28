@@ -6,6 +6,7 @@ use constant {
   SERVER => $ENV{ANYEVENT_MQTT_SERVER} || 'localhost',
   JOBS => $ENV{ANYEVENT_MQTT_TESTER_JOBS} || 1,
   REPEAT => $ENV{ANYEVENT_MQTT_TESTER_REPEAT} || 1,
+  TIMEOUT => $ENV{ANYEVENT_MQTT_TESTER_TIMEOUT} || 5,
   DIAG => $ENV{ANYEVENT_MQTT_TESTER_DIAG},
 };
 
@@ -36,7 +37,7 @@ sub run {
   $conf->{topic} ||= '/zqk/test';
   $conf->{host} ||= SERVER;
   $conf->{repeat} ||= REPEAT;
-  $conf->{timeout} ||= 5 * $conf->{repeat};
+  $conf->{timeout} ||= TIMEOUT * $conf->{repeat} * $conf->{jobs};
   my ($test) = ($0 =~ m!([^/]+)\.t$!);
   $conf->{testname} ||= $test;
 
