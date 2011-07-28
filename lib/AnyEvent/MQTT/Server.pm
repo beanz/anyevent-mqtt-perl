@@ -262,6 +262,23 @@ sub _process_unsubscribe {
 sub _process_publish {
   my ($self, $client, $handle, $msg) = @_;
   print STDERR "publish ", $client->{name}, " ", $msg, "\n" if DEBUG;
+  if ($msg->qos == MQTT_QOS_EXACTLY_ONCE) {
+    $self->_write($client,
+                  message_type => MQTT_PUBREC,
+                  message_id => $msg->message_id);
+    $self->{_pub_pending_rel}->{$client}->{$msg->message_id} = $msg;
+    return;
+  }
+  $self->_do_publish($msg);
+  if ($msg->qos == MQTT_QOS_AT_LEAST_ONCE) {
+    $self->_write($client,
+                  message_type => MQTT_PUBACK,
+                  message_id => $msg->message_id);
+  }
+}
+
+sub _do_publish {
+  my ($self, $msg) = @_;
   my $topic = $msg->topic;
   my $message = $msg->message;
   if ($msg->retain) {
@@ -298,17 +315,35 @@ sub _process_publish {
                     retain => $msg->retain);
     }
   }
-
-  if ($msg->qos == MQTT_QOS_AT_LEAST_ONCE) {
-    $self->_write($client,
-                  message_type => MQTT_PUBACK,
-                  message_id => $msg->message_id);
-  }
 }
 
 sub _process_puback {
   my ($self, $client, $handle, $msg) = @_;
   print STDERR "puback ", $client->{name}, " ", $msg, "\n" if DEBUG;
+}
+
+sub _process_pubrec {
+  my ($self, $client, $handle, $msg) = @_;
+  print STDERR "pubrec ", $client->{name}, " ", $msg, "\n" if DEBUG;
+  $self->_write($client,
+                message_type => MQTT_PUBREL,
+                message_id => $msg->message_id);
+}
+
+sub _process_pubrel {
+  my ($self, $client, $handle, $msg) = @_;
+  print STDERR "pubrel ", $client->{name}, " ", $msg, "\n" if DEBUG;
+  $self->_write($client,
+                message_type => MQTT_PUBCOMP,
+                message_id => $msg->message_id);
+  my $pubmsg = delete $self->{_pub_pending_rel}->{$client}->{$msg->message_id}
+    or return;
+  $self->_do_publish($pubmsg);
+}
+
+sub _process_pubcomp {
+  my ($self, $client, $handle, $msg) = @_;
+  print STDERR "pubcomp ", $client->{name}, " ", $msg, "\n" if DEBUG;
 }
 
 sub _process_pingreq {
