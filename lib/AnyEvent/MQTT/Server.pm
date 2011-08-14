@@ -30,6 +30,7 @@ use AnyEvent::Handle;
 use AnyEvent::Socket;
 use Net::MQTT::Constants;
 use Net::MQTT::Message;
+use Net::MQTT::TopicStore;
 use Carp qw/croak carp/;
 use Sub::Name;
 use Scalar::Util qw/weaken/;
@@ -132,6 +133,8 @@ sub _accept {
      handle => $hd,
      addr => $host.':'.$port,
      name => $host.':'.$port,
+     subs => {},
+     sub_topics => Net::MQTT::TopicStore->new(),
     };
   $hd->push_read(ref $weak_self =>
                  subname 'client_reader_cb' => sub {
@@ -217,17 +220,12 @@ sub _process_subscribe {
   my @retained = ();
   foreach my $rec (@{$msg->topics}) {
     my ($topic, $qos) = @$rec;
-    my $re = topic_to_regexp($topic); # convert MQTT pattern to regexp
-    if ($re) {
-      $self->{_subre}->{$topic}->{re} = $re;
-      $self->{_subre}->{$topic}->{c}->{$client} = [$client, $qos];
-      foreach my $topic (keys %{$self->{_retained}}) {
-        push @retained, [$self->{_retained}->{$topic}, $qos] if ($topic =~ $re);
-      }
-    } else {
-      $self->{_sub}->{$topic}->{$client} = [$client, $qos];
-      push @retained, [$self->{_retained}->{$topic}, $qos]
-        if (exists $self->{_retained}->{$topic});
+    my $store = Net::MQTT::TopicStore->new($topic);
+    $client->{subs}->{$topic} = $qos;
+    $client->{sub_topics}->add($topic);
+    foreach my $retained_topic (keys %{$self->{_retained}}) {
+      push @retained, [$self->{_retained}->{$retained_topic}, $qos]
+        if ($store->values($retained_topic));
     }
     push @qos, $qos;
   }
@@ -251,16 +249,8 @@ sub _process_unsubscribe {
   my ($self, $client, $handle, $msg) = @_;
   print STDERR "unsubscribe ", $client->{name}, " ", $msg, "\n" if DEBUG;
   foreach my $topic (@{$msg->topics}) {
-    my $re = topic_to_regexp($topic); # convert MQTT pattern to regexp
-    if ($re) {
-      delete $self->{_subre}->{$topic}->{c}->{$client};
-      delete $self->{_subre}->{$topic}
-        unless (keys %{$self->{_subre}->{$topic}->{c}});
-    } else {
-      delete $self->{_sub}->{$topic}->{$client};
-      delete $self->{_sub}->{$topic}
-        unless (keys %{$self->{_sub}->{$topic}});
-    }
+    delete $client->{subs}->{$topic};
+    $client->{sub_topics}->delete($topic);
   }
   $self->_write($client,
                 message_type => MQTT_UNSUBACK,
@@ -298,8 +288,10 @@ sub _do_publish {
       print STDERR "  retained '", $msg->message, "'\n" if DEBUG;
     }
   }
-  foreach my $c (keys %{$self->{_sub}->{$topic}||{}}) {
-    my ($subclient, $qos) = @{$self->{_sub}->{$topic}->{$c}};
+  foreach my $key (keys %{$self->{_client}}) {
+    my $subclient = $self->{_client}->{$key};
+    my $t = shift @{$subclient->{sub_topics}->values($topic)} or next;
+    my $qos = $subclient->{subs}->{$t};
     $self->_write($subclient,
                   message_type => MQTT_PUBLISH,
                   qos => ($msg->qos < $qos ? $msg->qos : $qos),
@@ -307,21 +299,6 @@ sub _do_publish {
                   topic => $msg->topic,
                   message => $message,
                   retain => $msg->retain);
-  }
-  foreach my $topic (keys %{$self->{_subre}||{}}) {
-    my $rec = $self->{_subre}->{$topic};
-    my $re = $rec->{re};
-    next unless ($topic =~ $re);
-    foreach my $c (keys %{$rec->{c}}) {
-      my ($subclient, $qos) = @{$rec->{c}->{$c}};
-      $self->_write($subclient,
-                    message_type => MQTT_PUBLISH,
-                    qos => ($msg->qos < $qos ? $msg->qos : $qos),
-                    message_id => $self->_message_id($subclient),
-                    topic => $msg->topic,
-                    message => $message,
-                    retain => $msg->retain);
-    }
   }
 }
 

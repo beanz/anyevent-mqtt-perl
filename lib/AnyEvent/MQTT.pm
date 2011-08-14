@@ -49,6 +49,7 @@ use AnyEvent;
 use AnyEvent::Handle;
 use Net::MQTT::Constants;
 use Net::MQTT::Message;
+use Net::MQTT::TopicStore;
 use Carp qw/croak carp/;
 use Sub::Name;
 use Scalar::Util qw/weaken/;
@@ -133,6 +134,7 @@ sub new {
            clean_session => 1,
            write_queue => [],
            inflight => {},
+           _sub_topics => Net::MQTT::TopicStore->new(),
            %p,
           }, $pkg;
 }
@@ -443,6 +445,7 @@ sub _remove_subscription {
     print STDERR "Remove of $topic\n" if DEBUG;
     my $mid = $self->{message_id}++;
     delete $self->{_sub}->{$topic};
+    $self->{_sub_topics}->delete($topic);
     $self->{_unsub_pending_by_message_id}->{$mid} = $topic;
     $self->{_unsub_pending}->{$topic} = { cv => [ $cv ] };
     return $mid;
@@ -459,14 +462,8 @@ sub _confirm_subscription {
     carp 'SubAck with no pending subscription for message id: ', $mid, "\n";
     return;
   }
-  my $re = topic_to_regexp($topic); # convert MQTT pattern to regexp
-  my $rec;
-  if ($re) {
-    $rec = $self->{_subre}->{$topic} = delete $self->{_sub_pending}->{$topic};
-    $rec->{re} = $re;
-  } else {
-    $rec = $self->{_sub}->{$topic} = delete $self->{_sub_pending}->{$topic};
-  }
+  my $rec = $self->{_sub}->{$topic} = delete $self->{_sub_pending}->{$topic};
+  $self->{_sub_topics}->add($topic);
   $rec->{qos} = $qos;
 
   foreach my $cv (@{$rec->{cv}}) {
@@ -704,25 +701,18 @@ sub _publish_locally {
   my ($self, $msg) = @_;
   my $msg_topic = $msg->topic;
   my $msg_data = $msg->message;
-  my $rec = $self->{_sub}->{$msg_topic};
-  my %matched;
-  if ($rec) {
-    foreach my $cb (@{$rec->{cb}}) {
-      next if ($matched{$cb}++);
-      $cb->($msg_topic, $msg_data, $msg);
-    }
-  }
-  foreach my $topic (keys %{$self->{_subre}}) {
-    $rec = $self->{_subre}->{$topic};
-    my $re = $rec->{re};
-    next unless ($msg_topic =~ $re);
-    foreach my $cb (@{$rec->{cb}}) {
-      next if ($matched{$cb}++);
-      $cb->($msg_topic, $msg_data, $msg);
-    }
-  }
-  unless (scalar keys %matched) {
+  my $matches = $self->{_sub_topics}->values($msg_topic);
+  unless (scalar @$matches) {
     carp "Unexpected publish:\n", $msg->string('  '), "\n";
+    return;
+  }
+  my %matched;
+  foreach my $topic (@$matches) {
+    my $rec = $self->{_sub}->{$topic};
+    foreach my $cb (@{$rec->{cb}}) {
+      next if ($matched{$cb}++);
+      $cb->($msg_topic, $msg_data, $msg);
+    }
   }
   1;
 }
