@@ -291,6 +291,7 @@ sub _do_publish {
   foreach my $key (keys %{$self->{_client}}) {
     my $subclient = $self->{_client}->{$key};
     my $t = shift @{$subclient->{sub_topics}->values($topic)} or next;
+    # TOFIX: what if there are two subscriptions that match with different qos?
     my $qos = $subclient->{subs}->{$t};
     $self->_write($subclient,
                   message_type => MQTT_PUBLISH,
