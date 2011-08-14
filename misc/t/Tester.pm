@@ -139,6 +139,7 @@ sub run_stream {
       ok($cv->recv, '...published - '.$name);
     } elsif ($rec->{action} eq 'wait') {
       my $msg = $cv{$rec->{for}}->recv;
+      $cv{$rec->{for}} = AnyEvent->condvar;
       my $result = $rec->{result};
       if (ref $result) {
         foreach my $k (sort keys %$result) {
