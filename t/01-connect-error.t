@@ -18,23 +18,25 @@ BEGIN {
   if ($@) {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
+  eval { require AnyEvent::MockTCPServer; import AnyEvent::MockTCPServer };
+  if ($@) {
+    import Test::More skip_all => 'No AnyEvent::MockTCPServer module: '.$@;
+  }
   import Test::More;
-  use t::MockServer qw/:all/;
 }
 
 my @connections =
   (
    [
-    mockrecv('10 26 00 06  4D 51 49 73   64 70 03 02  00 78 00 18
-              61 61 61 61  61 61 61 61   61 61 61 61  61 61 61 61
-              61 61 61 61  61 61 61 61',
-             q{connect invalid client id}),
-    mocksend('20 02 00 02', q{connack invalid client id}),
+    [ packrecv => '10 26 00 06  4D 51 49 73   64 70 03 02  00 78 00 18
+                   61 61 61 61  61 61 61 61   61 61 61 61  61 61 61 61
+                   61 61 61 61  61 61 61 61',  q{connect invalid client id} ],
+    [ packsend => '20 02 00 02', q{connack invalid client id} ],
    ],
   );
 
 my $server;
-eval { $server = t::MockServer->new(@connections) };
+eval { $server = AnyEvent::MockTCPServer->new(connections => \@connections); };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;

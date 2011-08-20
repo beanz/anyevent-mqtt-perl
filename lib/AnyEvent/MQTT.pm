@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package AnyEvent::MQTT;
 BEGIN {
-  $AnyEvent::MQTT::VERSION = '1.111981';
+  $AnyEvent::MQTT::VERSION = '1.112320';
 }
 
 # ABSTRACT: AnyEvent module for an MQTT client
@@ -13,6 +13,7 @@ use AnyEvent;
 use AnyEvent::Handle;
 use Net::MQTT::Constants;
 use Net::MQTT::Message;
+use Net::MQTT::TopicStore;
 use Carp qw/croak carp/;
 use Sub::Name;
 use Scalar::Util qw/weaken/;
@@ -40,6 +41,7 @@ sub new {
            clean_session => 1,
            write_queue => [],
            inflight => {},
+           _sub_topics => Net::MQTT::TopicStore->new(),
            %p,
           }, $pkg;
 }
@@ -189,9 +191,8 @@ sub unsubscribe {
   my ($self, %p) = @_;
   my $topic = exists $p{topic} ? $p{topic} :
     croak ref $self, '->unsubscribe requires "topic" parameter';
-  my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
   my $cv = exists $p{cv} ? delete $p{cv} : AnyEvent->condvar;
-  my $mid = $self->_remove_subscription($topic, $cv);
+  my $mid = $self->_remove_subscription($topic, $cv, $p{callback});
   if (defined $mid) { # not already subscribed/subscribing
     $self->_send(message_type => MQTT_UNSUBSCRIBE,
                  message_id => $mid,
@@ -205,21 +206,21 @@ sub _add_subscription {
   my $rec = $self->{_sub}->{$topic};
   if ($rec) {
     print STDERR "Add $sub to existing $topic subscription\n" if DEBUG;
-    push @{$rec->{cb}}, $sub;
+    $rec->{cb}->{$sub} = $sub;
     $cv->send($rec->{qos});
     return;
   }
   $rec = $self->{_sub_pending}->{$topic};
   if ($rec) {
     print STDERR "Add $sub to existing pending $topic subscription\n" if DEBUG;
-    push @{$rec->{cb}}, $sub;
+    $rec->{cb}->{$sub} = $sub;
     push @{$rec->{cv}}, $cv;
     return;
   }
   my $mid = $self->{message_id}++;
   print STDERR "Add $sub as pending $topic subscription (mid=$mid)\n" if DEBUG;
   $self->{_sub_pending_by_message_id}->{$mid} = $topic;
-  $self->{_sub_pending}->{$topic} = { cb => [ $sub ], cv => [ $cv ] };
+  $self->{_sub_pending}->{$topic} = { cb => { $sub => $sub }, cv => [ $cv ] };
   $mid;
 }
 
@@ -232,17 +233,33 @@ sub _remove_subscription {
     return;
   }
   $rec = $self->{_sub}->{$topic};
-  if ($rec) {
-    print STDERR "Remove of $topic\n" if DEBUG;
-    my $mid = $self->{message_id}++;
-    delete $self->{_sub}->{$topic};
-    $self->{_unsub_pending_by_message_id}->{$mid} = $topic;
-    $self->{_unsub_pending}->{$topic} = { cv => [ $cv ] };
-    return $mid;
+  unless ($rec) {
+    print STDERR "Remove of $topic with no subscription\n" if DEBUG;
+    $cv->send(0);
+    return;
   }
-  print STDERR "Remove of $topic with no subscription\n" if DEBUG;
-  $cv->send(0);
-  return;
+
+  if (defined $sub) {
+    unless (exists $rec->{sub}->{$sub}) {
+      print STDERR "Remove of $topic for $sub with no subscription\n"
+        if DEBUG;
+      $cv->send(0);
+      return;
+    }
+    delete $rec->{sub}->{$sub};
+    unless (keys %{$rec->{sub}}) {
+      print STDERR "Remove of $topic for $sub\n" if DEBUG;
+      $cv->send(1);
+      return;
+    }
+  }
+  print STDERR "Remove of $topic\n" if DEBUG;
+  my $mid = $self->{message_id}++;
+  delete $self->{_sub}->{$topic};
+  $self->{_sub_topics}->delete($topic);
+  $self->{_unsub_pending_by_message_id}->{$mid} = $topic;
+  $self->{_unsub_pending}->{$topic} = { cv => [ $cv ] };
+  return $mid;
 }
 
 sub _confirm_subscription {
@@ -252,19 +269,14 @@ sub _confirm_subscription {
     carp 'SubAck with no pending subscription for message id: ', $mid, "\n";
     return;
   }
-  my $re = topic_to_regexp($topic); # convert MQTT pattern to regexp
-  my $rec;
-  if ($re) {
-    $rec = $self->{_subre}->{$topic} = delete $self->{_sub_pending}->{$topic};
-    $rec->{re} = $re;
-  } else {
-    $rec = $self->{_sub}->{$topic} = delete $self->{_sub_pending}->{$topic};
-  }
+  my $rec = $self->{_sub}->{$topic} = delete $self->{_sub_pending}->{$topic};
+  $self->{_sub_topics}->add($topic);
   $rec->{qos} = $qos;
 
   foreach my $cv (@{$rec->{cv}}) {
     $cv->send($qos);
   }
+  delete $rec->{cv};
 }
 
 sub _confirm_unsubscribe {
@@ -422,13 +434,25 @@ sub _handle_message {
   my ($handle, $msg, $error) = @_;
   return $self->_error(0, $error, 1) if ($error);
   $self->{message_log_callback}->('<', $msg) if ($self->{message_log_callback});
-  my $method = lc ref $msg;
-  $method =~ s/.*::/_process_/;
+  $self->_call_callback('before_msg_callback' => $msg) or return;
+  my $msg_type = lc ref $msg;
+  $msg_type =~ s/^.*:://;
+  $self->_call_callback('before_'.$msg_type.'_callback' => $msg) or return;
+  my $method = '_process_'.$msg_type;
   unless ($self->can($method)) {
     carp 'Unsupported message ', $msg->string(), "\n";
     return;
   }
-  $self->$method(@_);
+  my $res = $self->$method(@_);
+  $self->_call_callback('after_'.$msg_type.'_callback' => $msg, $res);
+  $res;
+}
+
+sub _call_callback {
+  my $self = shift;
+  my $cb_name = shift;
+  return 1 unless (exists $self->{$cb_name});
+  $self->{$cb_name}->(@_);
 }
 
 sub _process_connack {
@@ -478,25 +502,18 @@ sub _publish_locally {
   my ($self, $msg) = @_;
   my $msg_topic = $msg->topic;
   my $msg_data = $msg->message;
-  my $rec = $self->{_sub}->{$msg_topic};
-  my %matched;
-  if ($rec) {
-    foreach my $cb (@{$rec->{cb}}) {
-      next if ($matched{$cb}++);
-      $cb->($msg_topic, $msg_data, $msg);
-    }
-  }
-  foreach my $topic (keys %{$self->{_subre}}) {
-    $rec = $self->{_subre}->{$topic};
-    my $re = $rec->{re};
-    next unless ($msg_topic =~ $re);
-    foreach my $cb (@{$rec->{cb}}) {
-      next if ($matched{$cb}++);
-      $cb->($msg_topic, $msg_data, $msg);
-    }
-  }
-  unless (scalar keys %matched) {
+  my $matches = $self->{_sub_topics}->values($msg_topic);
+  unless (scalar @$matches) {
     carp "Unexpected publish:\n", $msg->string('  '), "\n";
+    return;
+  }
+  my %matched;
+  foreach my $topic (@$matches) {
+    my $rec = $self->{_sub}->{$topic};
+    foreach my $cb (values %{$rec->{cb}}) {
+      next if ($matched{$cb}++);
+      $cb->($msg_topic, $msg_data, $msg);
+    }
   }
   1;
 }
@@ -604,7 +621,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.111981
+version 1.112320
 
 =head1 SYNOPSIS
 
@@ -786,21 +803,16 @@ may contain values for the following keys:
 
 =item B<topic>
 
-  for the topic to subscribe to (this is required),
+  for the topic to unsubscribe from (this is required),
 
 =item B<callback>
 
   for the callback to call with messages (this is optional and currently
   not supported - all callbacks are unsubscribed),
 
-=item B<qos>
-
-  QoS level to use (default is MQTT_QOS_AT_MOST_ONCE),
-
 =item B<cv>
 
-  L<AnyEvent> condvar to use to signal the subscription is complete.
-  The received value will be the negotiated QoS level.
+  L<AnyEvent> condvar to use to signal the unsubscription is complete.
 
 =back
 

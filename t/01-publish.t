@@ -21,8 +21,11 @@ BEGIN {
   if ($@) {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
+  eval { require AnyEvent::MockTCPServer; import AnyEvent::MockTCPServer };
+  if ($@) {
+    import Test::More skip_all => 'No AnyEvent::MockTCPServer module: '.$@;
+  }
   import Test::More;
-  use t::MockServer qw/:all/;
 }
 
 my $published;
@@ -30,23 +33,23 @@ my $error;
 my @connections =
   (
    [
-    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
-              61 63 6D 65  5F 6D 71 74   74', 'connect'),
-    mocksend('20 02 00 00', 'connack'),
-    mockrecv('30 0F 00 06  2F 74 6F 70   69 63 6D 65  73 73 61 67
-              65', q{publish}),
-    mockcode(sub { $published->send(1) }, q{published}),
-    mockrecv('30 10 00 06  2F 74 6F 70   69 63 6D 65  73 73 61 67
-              65 32', q{publish file handle}),
-    mockcode(sub { $published->send(2) }, q{publish file handle done}),
-    mockrecv('30 10 00 06  2F 74 6F 70   69 63 6D 65  73 73 61 67
-              65 33', q{publish AnyEvent::Handle}),
-    mockcode(sub { $published->send(3) }, q{publish AnyEvent::Handle done}),
+    [ packrecv => '10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+                   61 63 6D 65  5F 6D 71 74   74', 'connect' ],
+    [ packsend => '20 02 00 00', 'connack' ],
+    [ packrecv => '30 0F 00 06  2F 74 6F 70   69 63 6D 65  73 73 61 67
+                   65', q{publish} ],
+    [ code => sub { $published->send(1) }, q{published} ],
+    [ packrecv => '30 10 00 06  2F 74 6F 70   69 63 6D 65  73 73 61 67
+                   65 32', q{publish file handle} ],
+    [ code => sub { $published->send(2) }, q{publish file handle done} ],
+    [ packrecv => '30 10 00 06  2F 74 6F 70   69 63 6D 65  73 73 61 67
+                   65 33', q{publish AnyEvent::Handle} ],
+    [ code => sub { $published->send(3) }, q{publish AnyEvent::Handle done} ],
    ],
   );
 
 my $server;
-eval { $server = t::MockServer->new(@connections) };
+eval { $server = AnyEvent::MockTCPServer->new(connections => \@connections); };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;

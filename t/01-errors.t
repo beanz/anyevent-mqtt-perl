@@ -20,23 +20,25 @@ BEGIN {
   if ($@) {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
+  eval { require AnyEvent::MockTCPServer; import AnyEvent::MockTCPServer };
+  if ($@) {
+    import Test::More skip_all => 'No AnyEvent::MockTCPServer module: '.$@;
+  }
   import Test::More;
   use t::Helpers qw/test_error/;
-  use t::MockServer qw/:all/;
 }
 
 my @connections =
   (
    [], # just close
-   [
-    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
-              61 63 6D 65  5F 6D 71 74   74', 'connect'),
-    mocksleep(0.5, 'connect timeout'),
+   [ [ packrecv => '10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+                    61 63 6D 65  5F 6D 71 74   74', 'connect' ],
+     [ sleep => 0.5, 'connect timeout' ],
    ],
   );
 
 my $server;
-eval { $server = t::MockServer->new(@connections) };
+eval { $server = AnyEvent::MockTCPServer->new(connections => \@connections); };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;

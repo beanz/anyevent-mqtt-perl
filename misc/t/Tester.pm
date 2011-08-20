@@ -2,6 +2,13 @@ package # Hide from PAUSE
         Tester;
 use strict;
 use warnings;
+use constant {
+  SERVER => $ENV{ANYEVENT_MQTT_SERVER} || 'localhost',
+  JOBS => $ENV{ANYEVENT_MQTT_TESTER_JOBS} || 1,
+  REPEAT => $ENV{ANYEVENT_MQTT_TESTER_REPEAT} || 1,
+  TIMEOUT => $ENV{ANYEVENT_MQTT_TESTER_TIMEOUT} || 5,
+  DIAG => $ENV{ANYEVENT_MQTT_TESTER_DIAG},
+};
 
 use Test::More;
 use AnyEvent::MQTT;
@@ -19,45 +26,52 @@ sub run {
   my $conf = $data->{config} || {};
   my $streams = $data->{streams} || [ $data->{stream} ];
   my $logs = $data->{logs} || [ $data->{log} ];
-  if ($conf->{repeat}) {
-    my $new = [];
-    push @$new, @$streams foreach (1..$conf->{repeat});
-    $streams = $new;
-    $new = [];
-    push @$new, @$logs foreach (1..$conf->{repeat});
-    $logs = $new;
-  }
+  $conf->{jobs} ||= JOBS;
+  my $new = [];
+  push @$new, @$streams foreach (1..$conf->{jobs});
+  $streams = $new;
+  $new = [];
+  push @$new, @$logs foreach (1..$conf->{jobs});
+  $logs = $new;
+
   $conf->{topic} ||= '/zqk/test';
-  $conf->{host} ||= $ENV{ANYEVENT_MQTT_SERVER} || 'localhost';
-  $conf->{timeout} ||= 5;
+  $conf->{host} ||= SERVER;
+  $conf->{repeat} ||= REPEAT;
+  $conf->{timeout} ||= TIMEOUT * $conf->{repeat} * $conf->{jobs};
   my ($test) = ($0 =~ m!([^/]+)\.t$!);
   $conf->{testname} ||= $test;
 
   my $timeout = AnyEvent->timer(after => $conf->{timeout},
                                 cb => sub { die "timeout\n" });
 
-  my @pids;
-  foreach my $i (0..(@$streams-1)) {
-    my $pid = fork;
-    die "Fork failed\n" unless (defined $pid);
-    if ($pid) {
-      push @pids, $pid;
-      next;
-    }
-    #diag('child '.$i);
-    my @log;
-    $conf->{pid} = $i;
-    $conf->{testname} .= '.'.$i;
-    $conf->{topicpid} = $conf->{topic}.'/'.$i;
-    run_stream($conf, $streams->[$i], \@log);
-    check_log($conf, $logs->[$i], \@log);
-    #diag('child '.$i.' finished');
-    exit;
-  }
+  foreach my $n (0..($conf->{repeat}-1)) {
 
-  foreach my $pid (@pids) {
-    #diag('waiting for child '.$pid);
-    waitpid($pid, 0);
+    my @pids;
+    foreach my $i (0..(@$streams-1)) {
+      my $pid = fork;
+      die "Fork failed\n" unless (defined $pid);
+      if ($pid) {
+        push @pids, $pid;
+        next;
+      }
+      #diag('child '.$i);
+      my @log;
+      $conf->{pid} = $i;
+      $conf->{testname} .= '.'.$n.'.'.$i;
+      $conf->{topicpid} = $conf->{topic}.'/'.$i;
+      run_stream($conf, $streams->[$i], \@log);
+      check_log($conf, $logs->[$i], \@log);
+      #diag('child '.$i.' finished');
+      exit;
+    }
+
+    foreach my $pid (@pids) {
+      #diag('waiting for child '.$pid);
+      waitpid($pid, 0);
+      if ($?) {
+        die "child died: ", ($?>>8), "\n";
+      }
+    }
   }
   done_testing();
 }
@@ -125,6 +139,7 @@ sub run_stream {
       ok($cv->recv, '...published - '.$name);
     } elsif ($rec->{action} eq 'wait') {
       my $msg = $cv{$rec->{for}}->recv;
+      $cv{$rec->{for}} = AnyEvent->condvar;
       my $result = $rec->{result};
       if (ref $result) {
         foreach my $k (sort keys %$result) {
@@ -140,6 +155,18 @@ sub run_stream {
       $cv{$cvname} = AnyEvent->condvar unless (exists $cv{$cvname});
       $timer{$name} = AnyEvent->timer(after => $rec->{timeout},
                       cb => sub { $cv{$cvname}->send("timeout") });
+    } elsif ($rec->{action} eq 'send') {
+      ok($cv = $mqtt->_send(%$args, cv => AnyEvent->condvar),
+         '...send - '.$name);
+      ok($cv->recv, '...sent - '.$name);
+      my $cvname = $rec->{cvname}||$name;
+      $cv{$cvname} = AnyEvent->condvar;
+      my $callback = 'before_'.($rec->{response}||'msg').'_callback';
+      $mqtt->{$callback} =
+        sub {
+          $cv{$cvname}->send($_[0]);
+          delete $mqtt->{$callback};
+        };
     } else {
       die "Invalid action: ", $rec->{action}, "\n";
     }
@@ -155,7 +182,7 @@ sub check_log {
       foreach my $alt (@$m) {
         my $re = $alt->{re};
         if (!defined $re || $log->[0] =~ m!$re!) {
-          diag($alt->{diag}) if (exists $alt->{diag});
+          diag($alt->{diag}) if (DIAG && exists $alt->{diag});
           return check_log($conf, $alt->{log}, $log);
         }
       }

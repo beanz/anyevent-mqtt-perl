@@ -12,6 +12,7 @@ my %WriteMakefileArgs = (
   'ABSTRACT' => 'AnyEvent module for an MQTT client',
   'AUTHOR' => 'Mark Hindess <soft-cpan@temporalanomaly.com>',
   'BUILD_REQUIRES' => {
+    'AnyEvent::MockTCPServer' => '0',
     'AnyEvent::Socket' => '0',
     'English' => '0',
     'Errno' => '0',
@@ -36,14 +37,15 @@ my %WriteMakefileArgs = (
     'Carp' => '0',
     'Getopt::Long' => '0',
     'Net::MQTT::Constants' => '0',
-    'Net::MQTT::Message' => '0',
+    'Net::MQTT::Message' => '1.112320',
+    'Net::MQTT::TopicStore' => '0',
     'POSIX' => '0',
     'Pod::Usage' => '0',
     'Scalar::Util' => '0',
     'Sub::Name' => '0',
     'constant' => '0'
   },
-  'VERSION' => '1.111981',
+  'VERSION' => '1.112320',
   'test' => {
     'TESTS' => 't/*.t'
   }

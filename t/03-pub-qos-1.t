@@ -19,36 +19,39 @@ BEGIN {
   if ($@) {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
+  eval { require AnyEvent::MockTCPServer; import AnyEvent::MockTCPServer };
+  if ($@) {
+    import Test::More skip_all => 'No AnyEvent::MockTCPServer module: '.$@;
+  }
   import Test::More;
   use t::Helpers qw/test_warn/;
-  use t::MockServer qw/:all/;
 }
 
 my $published;
 my @connections =
   (
    [
-    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
-              61 63 6D 65  5F 6D 71 74   74', q{connect}),
-    mocksend('20 02 00 00', q{connack}),
-    mockrecv('32 12 00 06  2F 74 6F 70   69 63 00 01  6D 65 73 73
-              61 67 65 31', q{publish}),
-    mocksend('40 02 00 01', q{puback}),
-    mockcode(sub { $published->send(1) }, q{puback done}),
-    mockrecv('32 12 00 06  2F 74 6F 70   69 63 00 02  6D 65 73 73
-              61 67 65 32', q{publish}),
-    mockrecv('C0 00', q{keepalive - pingreq}),
-    mocksend('D0 00', q{keepalive - pingresp}),
-    mockrecv('3A 12 00 06  2F 74 6F 70   69 63 00 02  6D 65 73 73
-              61 67 65 32', q{publish}),
-    mocksend('50 02 00 02', q{pubrec}),
-    mocksend('40 02 00 02', q{puback}),
-    mockcode(sub { $published->send(1) }, q{pubrec}),
+    [ packrecv => '10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+                   61 63 6D 65  5F 6D 71 74   74', q{connect} ],
+    [ packsend => '20 02 00 00', q{connack} ],
+    [ packrecv => '32 12 00 06  2F 74 6F 70   69 63 00 01  6D 65 73 73
+                   61 67 65 31', q{publish} ],
+    [ packsend => '40 02 00 01', q{puback} ],
+    [ code => sub { $published->send(1) }, q{puback done} ],
+    [ packrecv => '32 12 00 06  2F 74 6F 70   69 63 00 02  6D 65 73 73
+                   61 67 65 32', q{publish} ],
+    [ packrecv => 'C0 00', q{keepalive - pingreq} ],
+    [ packsend => 'D0 00', q{keepalive - pingresp} ],
+    [ packrecv => '3A 12 00 06  2F 74 6F 70   69 63 00 02  6D 65 73 73
+                   61 67 65 32', q{publish} ],
+    [ packsend => '50 02 00 02', q{pubrec} ],
+    [ packsend => '40 02 00 02', q{puback} ],
+    [ code => sub { $published->send(1) }, q{pubrec} ],
    ],
   );
 
 my $server;
-eval { $server = t::MockServer->new(@connections) };
+eval { $server = AnyEvent::MockTCPServer->new(connections => \@connections); };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;
