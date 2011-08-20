@@ -19,28 +19,31 @@ BEGIN {
   if ($@) {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
+  eval { require AnyEvent::MockTCPServer; import AnyEvent::MockTCPServer };
+  if ($@) {
+    import Test::More skip_all => 'No AnyEvent::MockTCPServer module: '.$@;
+  }
   import Test::More;
-  use t::MockServer qw/:all/;
 }
 
 my $published;
 my @connections =
   (
    [
-    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
-              61 63 6D 65  5F 6D 71 74   74', q{connect}),
-    mocksend('20 02 00 00', q{connack}),
-    mockrecv('34 12 00 06  2F 74 6F 70   69 63 00 01  6D 65 73 73
-              61 67 65 31', q{publish}),
-    mocksend('50 02 00 01', q{pubrec}),
-    mockrecv('62 02 00 01', q{pubrel}),
-    mocksend('70 02 00 01', q{pubcomp}),
-    mockcode(sub { $published->send(1) }, q{publish complete}),
+    [ packrecv => '10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+                   61 63 6D 65  5F 6D 71 74   74', q{connect} ],
+    [ packsend => '20 02 00 00', q{connack} ],
+    [ packrecv => '34 12 00 06  2F 74 6F 70   69 63 00 01  6D 65 73 73
+                   61 67 65 31', q{publish} ],
+    [ packsend => '50 02 00 01', q{pubrec} ],
+    [ packrecv => '62 02 00 01', q{pubrel} ],
+    [ packsend => '70 02 00 01', q{pubcomp} ],
+    [ code => sub { $published->send(1) }, q{publish complete} ],
    ],
   );
 
 my $server;
-eval { $server = t::MockServer->new(@connections) };
+eval { $server = AnyEvent::MockTCPServer->new(connections => \@connections); };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;

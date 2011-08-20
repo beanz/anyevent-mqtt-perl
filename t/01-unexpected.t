@@ -19,37 +19,40 @@ BEGIN {
   if ($@) {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
+  eval { require AnyEvent::MockTCPServer; import AnyEvent::MockTCPServer };
+  if ($@) {
+    import Test::More skip_all => 'No AnyEvent::MockTCPServer module: '.$@;
+  }
   import Test::More;
   use t::Helpers qw/test_warn/;
-  use t::MockServer qw/:all/;
 }
 
 my $sent = AnyEvent->condvar;
 my @connections =
   (
    [
-    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
-              61 63 6D 65  5F 6D 71 74   74', q{connect invalid message}),
-    mocksend('10 17 00 06  4d 51 49 73   64 70 03 02  00 78 00 09
-              61 63 6d 65  5f 6d 71 74   74', q{invalid message}),
-    mocksend('20 02 00 00', q{connack}),
-    mockrecv('C0 00', q{pingreq trigger}),
-    mocksend('40 02 04 d2', q{puback}),
-    mocksleep(0.1, q{wait}),
-    mockcode(sub { $sent->send(1) }, q{sent}),
-    mockrecv('C0 00', q{pingreq trigger}),
-    mocksend('70 02 04 d2', q{pubcomp}),
-    mocksleep(0.1, q{wait}),
-    mockcode(sub { $sent->send(1) }, q{sent}),
-    mockrecv('C0 00', q{pingreq trigger}),
-    mocksend('60 02 04 d2', q{pubrel}),
-    mocksleep(0.1, q{wait}),
-    mockcode(sub { $sent->send(1) }, q{sent}),
+    [ packrecv => '10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+                   61 63 6D 65  5F 6D 71 74   74', q{connect invalid message} ],
+    [ packsend => '10 17 00 06  4d 51 49 73   64 70 03 02  00 78 00 09
+                   61 63 6d 65  5f 6d 71 74   74', q{invalid message} ],
+    [ packsend => '20 02 00 00', q{connack} ],
+    [ packrecv => 'C0 00', q{pingreq trigger} ],
+    [ packsend => '40 02 04 d2', q{puback} ],
+    [ sleep => 0.1, q{wait} ],
+    [ code => sub { $sent->send(1) }, q{sent} ],
+    [ packrecv => 'C0 00', q{pingreq trigger} ],
+    [ packsend => '70 02 04 d2', q{pubcomp} ],
+    [ sleep => 0.1, q{wait} ],
+    [ code => sub { $sent->send(1) }, q{sent} ],
+    [ packrecv => 'C0 00', q{pingreq trigger} ],
+    [ packsend => '60 02 04 d2', q{pubrel} ],
+    [ sleep =>0.1, q{wait} ],
+    [ code => sub { $sent->send(1) }, q{sent} ],
    ],
   );
 
 my $server;
-eval { $server = t::MockServer->new(@connections) };
+eval { $server = AnyEvent::MockTCPServer->new(connections => \@connections); };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;

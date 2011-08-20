@@ -17,6 +17,7 @@ debian/rules
 debian/watch
 dist.ini
 lib/AnyEvent/MQTT.pm
+misc/t/001-ping-with-payload.t
 misc/t/01-connect.t
 misc/t/02-pub-qos0-sub-qos0.t
 misc/t/02-pub-qos0-sub-qos1.t
@@ -36,7 +37,13 @@ misc/t/06-pub-retain-qos1-pub-qos2.t
 misc/t/07-pub-retain-qos2-pub-qos0.t
 misc/t/07-pub-retain-qos2-pub-qos1.t
 misc/t/07-pub-retain-qos2-pub-qos2.t
+misc/t/08-pub-topic-wildcard-hash.t
+misc/t/08-pub-topic-wildcard-plus-retain.t
+misc/t/08-pub-topic-wildcard-plus.t
+misc/t/08-pub-topic-wildcard-slash-hash.t
+misc/t/08-pub-topic-wildcard-slash-plus.t
 misc/t/08-pub-topic-wildcard.t
+misc/t/09-ping.t
 misc/t/Tester.pm
 misc/test-server
 t/01-connect-error.t
@@ -51,8 +58,8 @@ t/03-pub-qos-1.t
 t/03-pub-qos-2.t
 t/03-sub-qos-1.t
 t/03-sub-qos-2.t
+t/04-multi-subs.t
 t/Helpers.pm
-t/MockServer.pm
 t/author-critic.t
 t/release-common_spelling.t
 t/release-eol.t
