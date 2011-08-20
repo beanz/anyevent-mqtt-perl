@@ -18,37 +18,40 @@ BEGIN {
   if ($@) {
     import Test::More skip_all => 'No AnyEvent::Socket module installed: $@';
   }
+  eval { require AnyEvent::MockTCPServer; import AnyEvent::MockTCPServer };
+  if ($@) {
+    import Test::More skip_all => 'No AnyEvent::MockTCPServer module: '.$@;
+  }
   import Test::More;
   use t::Helpers qw/test_warn/;
-  use t::MockServer qw/:all/;
 }
 
 my @connections =
   (
    [
-    mockrecv('10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
-              61 63 6D 65  5F 6D 71 74   74', 'connect'),
-    mocksend('20 02 00 00', 'connack'),
-    mockrecv('82 08 00 01  00 03 2F 74   31 00', q{subscribe /t1}),
-    mocksend('90 03 00 01  00', q{suback /t1}),
-    mocksend('30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 31',
-             q{publish /t1 message1}),
-    mockrecv('C0 00', q{pingreq trigger publish 2}),
-    mocksend('30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 32',
-             q{publish /t1 message2}),
-    mockrecv('C0 00', q{pingreq trigger publish 3}),
-    mocksend('30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 33',
-             q{publish /t1 message3}),
-    mockrecv('C0 00', q{pingreq trigger publish 4}),
-    mocksend('30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 34',
-             q{publish /t1 message4}),
-    mockrecv('A2 07 00 03  00 03 2F 74   31', q{unsubscribe /t1}),
-    mocksend('B0 02 00 03', q{unsuback /t1}),
+    [ packrecv => '10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+                   61 63 6D 65  5F 6D 71 74   74', 'connect' ],
+    [ packsend => '20 02 00 00', 'connack' ],
+    [ packrecv => '82 08 00 01  00 03 2F 74   31 00', q{subscribe /t1} ],
+    [ packsend => '90 03 00 01  00', q{suback /t1} ],
+    [ packsend => '30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 31',
+      q{publish /t1 message1} ],
+    [ packrecv => 'C0 00', q{pingreq trigger publish 2} ],
+    [ packsend => '30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 32',
+      q{publish /t1 message2} ],
+    [ packrecv => 'C0 00', q{pingreq trigger publish 3} ],
+    [ packsend => '30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 33',
+      q{publish /t1 message3} ],
+    [ packrecv => 'C0 00', q{pingreq trigger publish 4} ],
+    [ packsend => '30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 34',
+      q{publish /t1 message4} ],
+    [ packrecv => 'A2 07 00 03  00 03 2F 74   31', q{unsubscribe /t1} ],
+    [ packsend => 'B0 02 00 03', q{unsuback /t1} ],
    ],
   );
 
 my $server;
-eval { $server = t::MockServer->new(@connections) };
+eval { $server = AnyEvent::MockTCPServer->new(connections => \@connections); };
 plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;
