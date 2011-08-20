@@ -371,21 +371,16 @@ may contain values for the following keys:
 
 =item B<topic>
 
-  for the topic to subscribe to (this is required),
+  for the topic to unsubscribe from (this is required),
 
 =item B<callback>
 
   for the callback to call with messages (this is optional and currently
   not supported - all callbacks are unsubscribed),
 
-=item B<qos>
-
-  QoS level to use (default is MQTT_QOS_AT_MOST_ONCE),
-
 =item B<cv>
 
-  L<AnyEvent> condvar to use to signal the subscription is complete.
-  The received value will be the negotiated QoS level.
+  L<AnyEvent> condvar to use to signal the unsubscription is complete.
 
 =back
 
@@ -398,7 +393,6 @@ sub unsubscribe {
   my ($self, %p) = @_;
   my $topic = exists $p{topic} ? $p{topic} :
     croak ref $self, '->unsubscribe requires "topic" parameter';
-  my $qos = exists $p{qos} ? $p{qos} : MQTT_QOS_AT_MOST_ONCE;
   my $cv = exists $p{cv} ? delete $p{cv} : AnyEvent->condvar;
   my $mid = $self->_remove_subscription($topic, $cv);
   if (defined $mid) { # not already subscribed/subscribing
