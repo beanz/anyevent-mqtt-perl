@@ -1,6 +1,9 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+    - Support multiple subscriptions to the same topic with different
+      callback functions.
+    - Disconnect support.
 
 1.111981  2011-07-17 22:54:00 Europe/London
     - Fix PAUSE indexing problem.

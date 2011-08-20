@@ -1,7 +1,7 @@
 Source: libanyevent-mqtt-perl
 Section: perl
 Priority: optional
-Build-Depends: debhelper (>= 5)
+Build-Depends: debhelper (>= 5), libanyevent-mocktcpserver-perl
 Build-Depends-Indep: perl (>= 5.6.10-12)
 Maintainer: Mark Hindess <soft-debian@temporalanomaly.com>
 Standards-Version: 3.9.1.0
@@ -9,7 +9,7 @@ Homepage: http://search.cpan.org/dist/AnyEvent-MQTT/
 
 Package: libanyevent-mqtt-perl
 Architecture: all
-Depends: ${perl:Depends}, ${misc:Depends}, libnet-mqtt-perl,
+Depends: ${perl:Depends}, ${misc:Depends}, libnet-mqtt-perl (>= 1.112320-1),
  libanyevent-perl, libsub-name-perl
 Suggests: libgtk2-perl
 Description: AnyEvent::MQTT Perl modules for MQTT protocol with AnyEvent
