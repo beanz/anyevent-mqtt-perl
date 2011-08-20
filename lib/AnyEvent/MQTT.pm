@@ -394,7 +394,7 @@ sub unsubscribe {
   my $topic = exists $p{topic} ? $p{topic} :
     croak ref $self, '->unsubscribe requires "topic" parameter';
   my $cv = exists $p{cv} ? delete $p{cv} : AnyEvent->condvar;
-  my $mid = $self->_remove_subscription($topic, $cv);
+  my $mid = $self->_remove_subscription($topic, $cv, $p{callback});
   if (defined $mid) { # not already subscribed/subscribing
     $self->_send(message_type => MQTT_UNSUBSCRIBE,
                  message_id => $mid,
@@ -408,21 +408,21 @@ sub _add_subscription {
   my $rec = $self->{_sub}->{$topic};
   if ($rec) {
     print STDERR "Add $sub to existing $topic subscription\n" if DEBUG;
-    push @{$rec->{cb}}, $sub;
+    $rec->{cb}->{$sub} = $sub;
     $cv->send($rec->{qos});
     return;
   }
   $rec = $self->{_sub_pending}->{$topic};
   if ($rec) {
     print STDERR "Add $sub to existing pending $topic subscription\n" if DEBUG;
-    push @{$rec->{cb}}, $sub;
+    $rec->{cb}->{$sub} = $sub;
     push @{$rec->{cv}}, $cv;
     return;
   }
   my $mid = $self->{message_id}++;
   print STDERR "Add $sub as pending $topic subscription (mid=$mid)\n" if DEBUG;
   $self->{_sub_pending_by_message_id}->{$mid} = $topic;
-  $self->{_sub_pending}->{$topic} = { cb => [ $sub ], cv => [ $cv ] };
+  $self->{_sub_pending}->{$topic} = { cb => { $sub => $sub }, cv => [ $cv ] };
   $mid;
 }
 
@@ -435,18 +435,33 @@ sub _remove_subscription {
     return;
   }
   $rec = $self->{_sub}->{$topic};
-  if ($rec) {
-    print STDERR "Remove of $topic\n" if DEBUG;
-    my $mid = $self->{message_id}++;
-    delete $self->{_sub}->{$topic};
-    $self->{_sub_topics}->delete($topic);
-    $self->{_unsub_pending_by_message_id}->{$mid} = $topic;
-    $self->{_unsub_pending}->{$topic} = { cv => [ $cv ] };
-    return $mid;
+  unless ($rec) {
+    print STDERR "Remove of $topic with no subscription\n" if DEBUG;
+    $cv->send(0);
+    return;
   }
-  print STDERR "Remove of $topic with no subscription\n" if DEBUG;
-  $cv->send(0);
-  return;
+
+  if (defined $sub) {
+    unless (exists $rec->{sub}->{$sub}) {
+      print STDERR "Remove of $topic for $sub with no subscription\n"
+        if DEBUG;
+      $cv->send(0);
+      return;
+    }
+    delete $rec->{sub}->{$sub};
+    unless (keys %{$rec->{sub}}) {
+      print STDERR "Remove of $topic for $sub\n" if DEBUG;
+      $cv->send(1);
+      return;
+    }
+  }
+  print STDERR "Remove of $topic\n" if DEBUG;
+  my $mid = $self->{message_id}++;
+  delete $self->{_sub}->{$topic};
+  $self->{_sub_topics}->delete($topic);
+  $self->{_unsub_pending_by_message_id}->{$mid} = $topic;
+  $self->{_unsub_pending}->{$topic} = { cv => [ $cv ] };
+  return $mid;
 }
 
 sub _confirm_subscription {
@@ -463,6 +478,7 @@ sub _confirm_subscription {
   foreach my $cv (@{$rec->{cv}}) {
     $cv->send($qos);
   }
+  delete $rec->{cv};
 }
 
 sub _confirm_unsubscribe {
@@ -703,7 +719,7 @@ sub _publish_locally {
   my %matched;
   foreach my $topic (@$matches) {
     my $rec = $self->{_sub}->{$topic};
-    foreach my $cb (@{$rec->{cb}}) {
+    foreach my $cb (values %{$rec->{cb}}) {
       next if ($matched{$cb}++);
       $cb->($msg_topic, $msg_data, $msg);
     }
