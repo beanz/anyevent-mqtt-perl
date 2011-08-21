@@ -1,6 +1,6 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
-1.112330  2011-08-21 22:14:55 Europe/London
+1.112330  2011-08-21 22:17:22 Europe/London
 
 1.112320  2011-08-20 23:12:35 Europe/London
     - Support multiple subscriptions to the same topic with different

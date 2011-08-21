@@ -209,7 +209,7 @@ sub _add_subscription {
     $rec->{cb}->{$sub} = $sub;
     $cv->send($rec->{qos});
     foreach my $msg (values %{$rec->{retained}}) {
-      $cb->($msg->topic, $msg->data, $msg);
+      $sub->($msg->topic, $msg->data, $msg);
     }
     return;
   }
