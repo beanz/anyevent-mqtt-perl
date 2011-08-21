@@ -2,7 +2,7 @@ use strict;
 use warnings;
 package AnyEvent::MQTT;
 BEGIN {
-  $AnyEvent::MQTT::VERSION = '1.112320';
+  $AnyEvent::MQTT::VERSION = '1.112330';
 }
 
 # ABSTRACT: AnyEvent module for an MQTT client
@@ -208,6 +208,9 @@ sub _add_subscription {
     print STDERR "Add $sub to existing $topic subscription\n" if DEBUG;
     $rec->{cb}->{$sub} = $sub;
     $cv->send($rec->{qos});
+    foreach my $msg (values %{$rec->{retained}}) {
+      $cb->($msg->topic, $msg->data, $msg);
+    }
     return;
   }
   $rec = $self->{_sub_pending}->{$topic};
@@ -220,7 +223,8 @@ sub _add_subscription {
   my $mid = $self->{message_id}++;
   print STDERR "Add $sub as pending $topic subscription (mid=$mid)\n" if DEBUG;
   $self->{_sub_pending_by_message_id}->{$mid} = $topic;
-  $self->{_sub_pending}->{$topic} = { cb => { $sub => $sub }, cv => [ $cv ] };
+  $self->{_sub_pending}->{$topic} =
+    { cb => { $sub => $sub }, cv => [ $cv ], retained => {} };
   $mid;
 }
 
@@ -508,8 +512,18 @@ sub _publish_locally {
     return;
   }
   my %matched;
+  my $msg_retain = $msg->retain;
   foreach my $topic (@$matches) {
     my $rec = $self->{_sub}->{$topic};
+    if ($msg_retain) {
+      if ($msg_data eq '') {
+        delete $rec->{retained}->{$msg_topic};
+        print STDERR "  retained cleared\n" if DEBUG;
+      } else {
+        $rec->{retained}->{$msg_topic} = $msg;
+        print STDERR "  retained '", $msg_data, "'\n" if DEBUG;
+      }
+    }
     foreach my $cb (values %{$rec->{cb}}) {
       next if ($matched{$cb}++);
       $cb->($msg_topic, $msg_data, $msg);
@@ -621,7 +635,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.112320
+version 1.112330
 
 =head1 SYNOPSIS
 
