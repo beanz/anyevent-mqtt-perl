@@ -1,6 +1,8 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+    - Support for retained messages with multiple subscriptions to the
+      same topic.
 
 1.112320  2011-08-20 23:12:35 Europe/London
     - Support multiple subscriptions to the same topic with different
