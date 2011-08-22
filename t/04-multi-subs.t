@@ -45,8 +45,8 @@ my @connections =
     [ packrecv => 'C0 00', q{pingreq trigger publish 4} ],
     [ packsend => '30 0d 00 03  2f 74 31 6d   65 73 73 61  67 65 34',
       q{publish /t1 message4} ],
-    [ packrecv => 'A2 07 00 03  00 03 2F 74   31', q{unsubscribe /t1} ],
-    [ packsend => 'B0 02 00 03', q{unsuback /t1} ],
+    [ packrecv => 'A2 07 00 02  00 03 2F 74   31', q{unsubscribe /t1} ],
+    [ packsend => 'B0 02 00 02', q{unsuback /t1} ],
    ],
   );
 
@@ -56,7 +56,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;
 
-plan tests => 21;
+plan tests => 22;
 
 use_ok('AnyEvent::MQTT');
 
@@ -75,8 +75,8 @@ my $t2_sub = $mqtt->subscribe(topic => '/t1', callback => $cb2);
 
 is($t1_sub->recv, 0, '... 1st subscribe /t1 complete');
 is($t2_sub->recv, 0, '... 2nd subscribe /t1 complete');
-is($t1_cv->recv, '/t1 message1', '... /t1 message1');
-is($t2_cv->recv, '/t1 message1', '... /t1 message1');
+is($t1_cv->recv, '/t1 message1', '... 1st /t1 message1');
+is($t2_cv->recv, '/t1 message1', '... 2nd /t1 message1');
 
 $t1_cv = AnyEvent->condvar;
 $t2_cv = AnyEvent->condvar;
@@ -94,7 +94,7 @@ $t2_cv = AnyEvent->condvar;
 $t3_cv = AnyEvent->condvar;
 
 my $unsub_cv = $mqtt->unsubscribe(topic => '/t1', callback => $cb1);
-is($unsub_cv->recv, '0', '... 1st /t1 unsubscribe');
+is($unsub_cv->recv, 1, '... 1st /t1 unsubscribe');
 
 $mqtt->_send(message_type => MQTT_PINGREQ); # ping to trigger server to cont.
 is($t2_cv->recv, '/t1 message3', '... 2nd /t1 message3');
@@ -104,10 +104,10 @@ $t2_cv = AnyEvent->condvar;
 $t3_cv = AnyEvent->condvar;
 
 $unsub_cv = $mqtt->unsubscribe(topic => '/t1', callback => $cb2);
-is($unsub_cv->recv, '0', '... 2nd /t1 unsubscribe');
+is($unsub_cv->recv, 1, '... 2nd /t1 unsubscribe');
 
 $mqtt->_send(message_type => MQTT_PINGREQ); # ping to trigger server to cont.
 is($t3_cv->recv, '/t1 message4', '... 3rd /t1 message4');
 
 $unsub_cv = $mqtt->unsubscribe(topic => '/t1', callback => $cb3);
-is($unsub_cv->recv, '0', '... 3rd /t1 unsubscribe');
+is($unsub_cv->recv, 1, '... 3rd /t1 unsubscribe');
