@@ -40,8 +40,6 @@ misc/t/07-pub-retain-qos2-pub-qos2.t
 misc/t/08-pub-topic-wildcard-hash.t
 misc/t/08-pub-topic-wildcard-plus-retain.t
 misc/t/08-pub-topic-wildcard-plus.t
-misc/t/08-pub-topic-wildcard-slash-hash.t
-misc/t/08-pub-topic-wildcard-slash-plus.t
 misc/t/08-pub-topic-wildcard.t
 misc/t/09-ping.t
 misc/t/Tester.pm
