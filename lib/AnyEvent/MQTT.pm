@@ -446,14 +446,14 @@ sub _remove_subscription {
   }
 
   if (defined $sub) {
-    unless (exists $rec->{sub}->{$sub}) {
+    unless (exists $rec->{cb}->{$sub}) {
       print STDERR "Remove of $topic for $sub with no subscription\n"
         if DEBUG;
       $cv->send(0);
       return;
     }
-    delete $rec->{sub}->{$sub};
-    unless (keys %{$rec->{sub}}) {
+    delete $rec->{cb}->{$sub};
+    if (keys %{$rec->{cb}}) {
       print STDERR "Remove of $topic for $sub\n" if DEBUG;
       $cv->send(1);
       return;
