@@ -20,6 +20,7 @@ my $retain = 1;
 my $qos = MQTT_QOS_AT_MOST_ONCE;
 my $count;
 my $keep_alive_timer = 120;
+my $code;
 GetOptions('help|?' => \$help,
            'man' => \$man,
            'verbose+' => \$verbose,
@@ -29,7 +30,8 @@ GetOptions('help|?' => \$help,
            'qos=i' => \$qos,
            'count=i' => \$count,
            'one|1' => sub { $count = 1 },
-           'keepalive=i' => \$keep_alive_timer) or pod2usage(2);
+           'keepalive=i' => \$keep_alive_timer,
+           'exec=s' => \$code) or pod2usage(2);
 pod2usage(1) if ($help);
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 pod2usage(2) unless (@ARGV); # need a topic
@@ -46,12 +48,20 @@ my $mqtt =
                         }
                       });
 
+my $quit = AnyEvent->condvar;
+my $cb = \&output;
+if ($code) {
+  $cb = sub {
+    my ($topic, $message, $obj) = @_;
+    push @_, $quit, $mqtt;
+    eval $code;
+  };
+}
 foreach my $topic (@ARGV) {
-  $mqtt->subscribe(topic => $topic, callback => \&output, qos => $qos);
+  $mqtt->subscribe(topic => $topic, callback => $cb, qos => $qos);
 }
 
-my $condvar = AnyEvent->condvar;
-$condvar->recv();
+$quit->recv();
 
 sub output {
   my ($topic, $message, $obj) = @_;
@@ -62,7 +72,7 @@ sub output {
     print $obj->string, "\n";
   }
   if (defined $count && --$count == 0) {
-    $condvar->send;
+    $quit->send;
   }
 }
 
@@ -76,7 +86,7 @@ anyevent-mqtt-sub - Perl script for subscribing to an MQTT topic
 
 =head1 VERSION
 
-version 1.112340
+version 1.112480
 
 =head1 SYNOPSIS
 
@@ -144,6 +154,24 @@ Short for B<-count 1>.  Read one message and exit.
 
 Ignore retained messages.  That is, wait for new messages rather than
 processing existing retained messages.
+
+=item B<--exec CODE>
+
+Use CODE for callback.  The code will be called with the following
+arguments:
+
+=over 4
+
+=item The topic of the received message.
+
+=item The message payload.
+
+=item The L<Net::MQTT::Message> object for the message.
+
+=item A L<condvar|AnyEvent/"CONDITION VARIABLES"> that can be emitted
+      to quit the subscribe loop.
+
+=item The L<AnyEvent::MQTT> object
 
 =back
 
