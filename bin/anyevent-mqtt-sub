@@ -171,7 +171,9 @@ arguments:
 =item A L<condvar|AnyEvent/"CONDITION VARIABLES"> that can be emitted
       to quit the subscribe loop.
 
-=item The L<AnyEvent::MQTT> object
+=item The L<AnyEvent::MQTT> object.
+
+=back
 
 =back
 
