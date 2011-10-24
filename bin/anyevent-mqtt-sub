@@ -133,7 +133,7 @@ GetOptions('help|?' => \$help,
            'count=i' => \$count,
            'one|1' => sub { $count = 1 },
            'keepalive=i' => \$keep_alive_timer,
-           'code=s' => \$code) or pod2usage(2);
+           'code|e=s' => \$code) or pod2usage(2);
 pod2usage(1) if ($help);
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 pod2usage(2) unless (@ARGV); # need a topic
