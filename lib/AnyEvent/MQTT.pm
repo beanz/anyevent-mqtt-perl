@@ -603,8 +603,12 @@ sub connect {
                             $handle->destroy;
                             $weak_self->_error($fatal, 'Error: '.$message, 0);
                           }),
-                          # on_eof => ... no eof as there is no QUIT so
-                          # there is always a waiting reader
+                          on_eof => subname('on_eof_cb' => sub {
+                            my ($handle) = @_;
+                            print STDERR "handle eof\n" if DEBUG;
+                            $handle->destroy;
+                            $weak_self->_error(1, 'EOF', 1);
+                          }),
                           on_timeout => subname('on_timeout_cb' => sub {
                             $weak_self->_error(0, $weak_self->{wait}.' timeout', 1);
                             $weak_self->{wait} = 'nothing';
@@ -626,11 +630,14 @@ sub connect {
                             $weak_self->_write_now($msg);
                             $handle->timeout($weak_self->{timeout});
                             $weak_self->{wait} = 'connack';
-                            $handle->push_read(ref $weak_self =>
-                                           subname 'reader_cb' => sub {
-                                             $weak_self->_handle_message(@_);
-                                             return;
-                                           });
+                            $handle->on_read(subname 'on_read_cb' => sub {
+                              my ($hdl) = @_;
+                              $hdl->push_read(ref $weak_self =>
+                                              subname 'reader_cb' => sub {
+                                                $weak_self->_handle_message(@_);
+                                                1;
+                                              });
+                            });
                           }));
   return $cv
 }
