@@ -251,6 +251,8 @@ sub dump_callback {
 __END__
 =pod
 
+=encoding UTF-8
+
 =head1 NAME
 
 anyevent-mqtt-sub - Perl script for subscribing to an MQTT topic

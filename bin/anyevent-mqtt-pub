@@ -59,6 +59,8 @@ $condvar->recv;
 __END__
 =pod
 
+=encoding UTF-8
+
 =head1 NAME
 
 anyevent-mqtt-pub - Perl script for publishing to an MQTT topic
