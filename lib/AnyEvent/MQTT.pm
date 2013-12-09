@@ -626,6 +626,8 @@ sub connect {
                                 will_qos => $weak_self->{will_qos},
                                 will_retain => $weak_self->{will_retain},
                                 will_message => $weak_self->{will_message},
+                                user_name => $weak_self->{user_name},
+                                password => $weak_self->{password},
                               );
                             $weak_self->_write_now($msg);
                             $handle->timeout($weak_self->{timeout});
