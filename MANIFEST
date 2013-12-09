@@ -9,15 +9,6 @@ README
 bin/anyevent-mqtt-monitor
 bin/anyevent-mqtt-pub
 bin/anyevent-mqtt-sub
-cover_db/cover.12
-cover_db/cover.css
-cover_db/coverage.html
-cover_db/index.html
-cover_db/lib-AnyEvent-MQTT-pm--branch.html
-cover_db/lib-AnyEvent-MQTT-pm--condition.html
-cover_db/lib-AnyEvent-MQTT-pm--subroutine.html
-cover_db/lib-AnyEvent-MQTT-pm.html
-cover_db/structure/8cfe6921b3bde9e47d01093eb72c9970
 debian/changelog
 debian/compat
 debian/control
@@ -70,8 +61,8 @@ t/03-sub-qos-2.t
 t/04-multi-subs.t
 t/Helpers.pm
 t/author-critic.t
+t/author-test-eol.t
 t/release-common_spelling.t
-t/release-eol.t
 t/release-kwalitee.t
 t/release-no-tabs.t
 t/release-pod-coverage.t

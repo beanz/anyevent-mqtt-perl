@@ -1,6 +1,6 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
-1.133430  2013-12-09 21:46:21 Europe/London
+1.133430  2013-12-09 21:49:24 Europe/London
     - Use on_read to avoid broken pipe on eof.
 
 1.112340  2011-08-22 20:22:40 Europe/London
