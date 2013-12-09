@@ -1,8 +1,8 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT;
-BEGIN {
-  $AnyEvent::MQTT::VERSION = '1.112480';
+{
+  $AnyEvent::MQTT::VERSION = '1.133430';
 }
 
 # ABSTRACT: AnyEvent module for an MQTT client
@@ -394,8 +394,12 @@ sub connect {
                             $handle->destroy;
                             $weak_self->_error($fatal, 'Error: '.$message, 0);
                           }),
-                          # on_eof => ... no eof as there is no QUIT so
-                          # there is always a waiting reader
+                          on_eof => subname('on_eof_cb' => sub {
+                            my ($handle) = @_;
+                            print STDERR "handle eof\n" if DEBUG;
+                            $handle->destroy;
+                            $weak_self->_error(1, 'EOF', 1);
+                          }),
                           on_timeout => subname('on_timeout_cb' => sub {
                             $weak_self->_error(0, $weak_self->{wait}.' timeout', 1);
                             $weak_self->{wait} = 'nothing';
@@ -413,15 +417,20 @@ sub connect {
                                 will_qos => $weak_self->{will_qos},
                                 will_retain => $weak_self->{will_retain},
                                 will_message => $weak_self->{will_message},
+                                user_name => $weak_self->{user_name},
+                                password => $weak_self->{password},
                               );
                             $weak_self->_write_now($msg);
                             $handle->timeout($weak_self->{timeout});
                             $weak_self->{wait} = 'connack';
-                            $handle->push_read(ref $weak_self =>
-                                           subname 'reader_cb' => sub {
-                                             $weak_self->_handle_message(@_);
-                                             return;
-                                           });
+                            $handle->on_read(subname 'on_read_cb' => sub {
+                              my ($hdl) = @_;
+                              $hdl->push_read(ref $weak_self =>
+                                              subname 'reader_cb' => sub {
+                                                $weak_self->_handle_message(@_);
+                                                1;
+                                              });
+                            });
                           }));
   return $cv
 }
@@ -635,7 +644,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.112480
+version 1.133430
 
 =head1 SYNOPSIS
 

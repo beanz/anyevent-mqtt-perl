@@ -4,7 +4,7 @@
       "Mark Hindess <soft-cpan@temporalanomaly.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.200004, CPAN::Meta::Converter version 2.101670",
+   "generated_by" : "Dist::Zilla version 4.300028, CPAN::Meta::Converter version 2.120921",
    "license" : [
       "perl_5"
    ],
@@ -16,38 +16,47 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "ExtUtils::MakeMaker" : "6.31"
+            "ExtUtils::MakeMaker" : "6.30"
+         }
+      },
+      "develop" : {
+         "requires" : {
+            "Pod::Coverage::TrustPod" : "0",
+            "Test::Pod" : "1.41",
+            "Test::Pod::Coverage" : "1.08"
          }
       },
       "runtime" : {
          "requires" : {
-            "AnyEvent" : 0,
-            "AnyEvent::Handle" : 0,
-            "Carp" : 0,
-            "Getopt::Long" : 0,
-            "Net::MQTT::Constants" : 0,
+            "AnyEvent" : "0",
+            "AnyEvent::Handle" : "0",
+            "Carp" : "0",
+            "Getopt::Long" : "0",
+            "Net::MQTT::Constants" : "0",
             "Net::MQTT::Message" : "1.112320",
-            "Net::MQTT::TopicStore" : 0,
-            "POSIX" : 0,
-            "Pod::Usage" : 0,
-            "Scalar::Util" : 0,
-            "Sub::Name" : 0,
-            "constant" : 0
+            "Net::MQTT::TopicStore" : "0",
+            "POSIX" : "0",
+            "Pod::Usage" : "0",
+            "Scalar::Util" : "0",
+            "Sub::Name" : "0",
+            "constant" : "0",
+            "strict" : "0",
+            "warnings" : "0"
          },
          "suggests" : {
-            "Gtk2" : 0,
-            "Gtk2::SimpleList" : 0
+            "Gtk2" : "0",
+            "Gtk2::SimpleList" : "0"
          }
       },
       "test" : {
          "requires" : {
-            "AnyEvent::MockTCPServer" : 0,
-            "AnyEvent::Socket" : 0,
-            "English" : 0,
-            "Errno" : 0,
-            "Exporter" : 0,
-            "File::Temp" : 0,
-            "Test::More" : 0
+            "AnyEvent::MockTCPServer" : "0",
+            "AnyEvent::Socket" : "0",
+            "Errno" : "0",
+            "Exporter" : "0",
+            "File::Temp" : "0",
+            "Test::More" : "0",
+            "base" : "0"
          }
       }
    },
@@ -63,6 +72,6 @@
          "web" : "https://github.com/beanz/anyevent-mqtt-perl"
       }
    },
-   "version" : "1.112480"
+   "version" : "1.133430"
 }
 
