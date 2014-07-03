@@ -1,6 +1,6 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
-1.141840  2014-07-03 23:05:04+01:00 Europe/London
+1.141840  2014-07-03 23:10:38+01:00 Europe/London
     - Use on_read to avoid broken pipe on eof.
     - Support username and password in connect message.
 
