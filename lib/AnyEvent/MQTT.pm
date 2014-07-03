@@ -1,10 +1,7 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT;
-{
-  $AnyEvent::MQTT::VERSION = '1.133430';
-}
-
+$AnyEvent::MQTT::VERSION = '1.141840';
 # ABSTRACT: AnyEvent module for an MQTT client
 
 
@@ -636,6 +633,7 @@ sub anyevent_read_type {
 1;
 
 __END__
+
 =pod
 
 =encoding UTF-8
@@ -646,7 +644,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.133430
+version 1.141840
 
 =head1 SYNOPSIS
 
@@ -866,10 +864,9 @@ Mark Hindess <soft-cpan@temporalanomaly.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by Mark Hindess.
+This software is copyright (c) 2014 by Mark Hindess.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

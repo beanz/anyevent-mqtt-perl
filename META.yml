@@ -3,38 +3,38 @@ abstract: 'AnyEvent module for an MQTT client'
 author:
   - 'Mark Hindess <soft-cpan@temporalanomaly.com>'
 build_requires:
-  AnyEvent::MockTCPServer: 0
-  AnyEvent::Socket: 0
-  Exporter: 0
-  File::Temp: 0
-  Test::More: 0
-  base: 0
+  AnyEvent::MockTCPServer: '0'
+  AnyEvent::Socket: '0'
+  Exporter: '0'
+  File::Temp: '0'
+  Test::More: '0'
+  base: '0'
 configure_requires:
-  ExtUtils::MakeMaker: 6.30
+  ExtUtils::MakeMaker: '6.30'
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 5.006, CPAN::Meta::Converter version 2.133380'
+generated_by: 'Dist::Zilla version 5.019, CPAN::Meta::Converter version 2.141520'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
+  version: '1.4'
 name: AnyEvent-MQTT
 requires:
-  AnyEvent: 0
-  AnyEvent::Handle: 0
-  Carp: 0
-  Getopt::Long: 0
-  Net::MQTT::Constants: 0
-  Net::MQTT::Message: 1.112320
-  Net::MQTT::TopicStore: 0
-  POSIX: 0
-  Pod::Usage: 0
-  Scalar::Util: 0
-  Sub::Name: 0
-  constant: 0
-  strict: 0
-  warnings: 0
+  AnyEvent: '0'
+  AnyEvent::Handle: '0'
+  Carp: '0'
+  Getopt::Long: '0'
+  Net::MQTT::Constants: '0'
+  Net::MQTT::Message: '1.112320'
+  Net::MQTT::TopicStore: '0'
+  POSIX: '0'
+  Pod::Usage: '0'
+  Scalar::Util: '0'
+  Sub::Name: '0'
+  constant: '0'
+  strict: '0'
+  warnings: '0'
 resources:
   bugtracker: https://github.com/beanz/anyevent-mqtt-perl/issues
   homepage: http://search.cpan.org/dist/AnyEvent-MQTT/
   repository: git://github.com/beanz/anyevent-mqtt-perl.git
-version: 1.133430
+version: '1.141840'

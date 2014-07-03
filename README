@@ -2,7 +2,7 @@ NAME
     AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 VERSION
-    version 1.133430
+    version 1.141840
 
 SYNOPSIS
       use AnyEvent::MQTT;
@@ -164,7 +164,7 @@ AUTHOR
     Mark Hindess <soft-cpan@temporalanomaly.com>
 
 COPYRIGHT AND LICENSE
-    This software is copyright (c) 2013 by Mark Hindess.
+    This software is copyright (c) 2014 by Mark Hindess.
 
     This is free software; you can redistribute it and/or modify it under
     the same terms as the Perl 5 programming language system itself.

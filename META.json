@@ -4,7 +4,7 @@
       "Mark Hindess <soft-cpan@temporalanomaly.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 5.006, CPAN::Meta::Converter version 2.133380",
+   "generated_by" : "Dist::Zilla version 5.019, CPAN::Meta::Converter version 2.141520",
    "license" : [
       "perl_5"
    ],
@@ -74,6 +74,6 @@
          "web" : "https://github.com/beanz/anyevent-mqtt-perl"
       }
    },
-   "version" : "1.133430"
+   "version" : "1.141840"
 }
 
