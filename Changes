@@ -1,6 +1,7 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+    - Fix bad release tar.gz.
 
 1.141991  2014-07-18 14:17:51+01:00 Europe/London
     - Use on_read to avoid broken pipe on eof.
