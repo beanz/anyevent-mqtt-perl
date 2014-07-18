@@ -1,8 +1,8 @@
-libanyevent-mqtt-perl (1.141990-1) unstable; urgency=low
+libanyevent-mqtt-perl (1.141992-1) unstable; urgency=low
 
   * New upstream release.
 
- -- Mark Hindess <soft-debian@temporalanomaly.com>  Fri, 18 Jul 2014 13:58:01 +0100
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Fri, 18 Jul 2014 14:17:51 +0100
 
 libanyevent-mqtt-perl (1.112340-1) unstable; urgency=low
 
