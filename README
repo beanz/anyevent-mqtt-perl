@@ -2,7 +2,7 @@ NAME
     AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 VERSION
-    version 1.141990
+    version 1.141991
 
 SYNOPSIS
       use AnyEvent::MQTT;
