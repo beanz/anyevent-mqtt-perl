@@ -20,6 +20,7 @@ my $retain = 1;
 my $qos = MQTT_QOS_AT_MOST_ONCE;
 my $count;
 my $keep_alive_timer = 120;
+my $code;
 GetOptions('help|?' => \$help,
            'man' => \$man,
            'verbose+' => \$verbose,
@@ -29,7 +30,8 @@ GetOptions('help|?' => \$help,
            'qos=i' => \$qos,
            'count=i' => \$count,
            'one|1' => sub { $count = 1 },
-           'keepalive=i' => \$keep_alive_timer) or pod2usage(2);
+           'keepalive=i' => \$keep_alive_timer,
+           'code|e=s' => \$code) or pod2usage(2);
 pod2usage(1) if ($help);
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 pod2usage(2) unless (@ARGV); # need a topic
@@ -46,12 +48,21 @@ my $mqtt =
                         }
                       });
 
+my $quit = AnyEvent->condvar;
+my $cb = \&output;
+if (defined $code) {
+  $cb = sub {
+    my ($topic, $message, $obj) = @_;
+    push @_, $quit, $mqtt;
+    eval $code; ## no critic
+    die $@ if ($@);
+  };
+}
 foreach my $topic (@ARGV) {
-  $mqtt->subscribe(topic => $topic, callback => \&output, qos => $qos);
+  $mqtt->subscribe(topic => $topic, callback => $cb, qos => $qos);
 }
 
-my $condvar = AnyEvent->condvar;
-$condvar->recv();
+$quit->recv();
 
 sub output {
   my ($topic, $message, $obj) = @_;
@@ -62,13 +73,15 @@ sub output {
     print $obj->string, "\n";
   }
   if (defined $count && --$count == 0) {
-    $condvar->send;
+    $quit->send;
   }
 }
 
-
 __END__
+
 =pod
+
+=encoding UTF-8
 
 =head1 NAME
 
@@ -76,7 +89,7 @@ anyevent-mqtt-sub - Perl script for subscribing to an MQTT topic
 
 =head1 VERSION
 
-version 1.112340
+version 1.141990
 
 =head1 SYNOPSIS
 
@@ -145,6 +158,38 @@ Short for B<-count 1>.  Read one message and exit.
 Ignore retained messages.  That is, wait for new messages rather than
 processing existing retained messages.
 
+=item B<--code CODE>
+
+Use CODE for callback.  The caller is responsible for ensuring that
+the code to be executed is safe - i.e. not "system('rm -rf /');".  The
+code will be called with the following arguments in C<@_>:
+
+=over 4
+
+=item The topic of the received message.
+
+=item The message payload.
+
+=item The L<Net::MQTT::Message> object for the message.
+
+=item A L<condvar|AnyEvent/"CONDITION VARIABLES"> that can be emitted
+      to quit the subscribe loop.
+
+=item The L<AnyEvent::MQTT> object.
+
+=item An empty hash reference that can be used as a stash.
+
+=back
+
+For example:
+
+  my ($topic, $payload, $message, $quitcv, $mqtt, $stash) = @_;
+  print STDERR $topic, ': ', $payload, "\n";
+  $quitcv->send if ($stash->{'count'}++ > 10);
+
+If a callback is provided with this option then the builtin callback
+is no longer called.
+
 =back
 
 =head1 SEE ALSO
@@ -162,10 +207,9 @@ Mark Hindess <soft-cpan@temporalanomaly.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Mark Hindess.
+This software is copyright (c) 2014 by Mark Hindess.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

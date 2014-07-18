@@ -1,4 +1,3 @@
-#!perl
 
 BEGIN {
   unless ($ENV{RELEASE_TESTING}) {
@@ -7,9 +6,7 @@ BEGIN {
   }
 }
 
-
-use Test::More;
-
-eval "use Test::Kwalitee";
-plan skip_all => "Test::Kwalitee required for testing kwalitee"
-  if $@;
+# this test was generated with Dist::Zilla::Plugin::Test::Kwalitee 2.07
+use strict;
+use warnings;
+use Test::Kwalitee;

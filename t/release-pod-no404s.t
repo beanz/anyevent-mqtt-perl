@@ -13,7 +13,6 @@ use warnings;
 use Test::More;
 
 foreach my $env_skip ( qw(
-  SKIP_POD_LINK_TESTS
   SKIP_POD_NO404S
   AUTOMATED_TESTING
 ) ){

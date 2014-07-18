@@ -7,6 +7,7 @@ use constant {
   DEBUG => $ENV{ANYEVENT_MQTT_TEST_DEBUG}
 };
 use Net::MQTT::Constants;
+use Errno qw/EPIPE/;
 use Scalar::Util qw/weaken/;
 
 $|=1;
@@ -27,7 +28,14 @@ BEGIN {
   use t::Helpers qw/test_error/;
 }
 
-my @connections = ( [] ); # just close
+my @connections =
+  (
+   [ [ packrecv => '10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
+                    61 63 6D 65  5F 6D 71 74   74', 'connect' ],
+     [ packsend => '20 02', 'half a connack' ],
+     # now close
+   ],
+  );
 
 my $server;
 eval { $server = AnyEvent::MockTCPServer->new(connections => \@connections); };
@@ -35,37 +43,20 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;
 
-plan tests => 9;
+plan tests => 6;
 
 use_ok('AnyEvent::MQTT');
 
 my $cv;
+my $error;
 my $mqtt =
   AnyEvent::MQTT->new(host => $host, port => $port, client_id => 'acme_mqtt',
-                      on_error => sub { $cv->send(@_) });
+                      timeout => 0.4,
+                      on_error => sub { $cv->send($!{EPIPE}, @_) });
 
-ok($mqtt, 'instantiate AnyEvent::MQTT object for eof test');
+ok($mqtt, 'instantiate AnyEvent::MQTT object');
 $cv = $mqtt->connect();
-my ($fatal, $error) = $cv->recv;
-is($fatal, 1, '... fatal error');
-is($error, 'EOF', '... message');
-
-is(test_error(sub { $mqtt->subscribe }),
-   'AnyEvent::MQTT->subscribe requires "topic" parameter',
-   'subscribe w/o topic');
-
-is(test_error(sub { $mqtt->unsubscribe }),
-   'AnyEvent::MQTT->unsubscribe requires "topic" parameter',
-   'unsubscribe w/o topic');
-
-is(test_error(sub { $mqtt->subscribe(topic => '/test') }),
-   'AnyEvent::MQTT->subscribe requires "callback" parameter',
-   'subscribe w/o callback');
-
-is(test_error(sub { $mqtt->publish }),
-   'AnyEvent::MQTT->publish requires "topic" parameter',
-   'publish w/o topic');
-
-is(test_error(sub { $mqtt->publish(topic => '/test') }),
-   'AnyEvent::MQTT->publish requires "message" or "handle" parameter',
-   'publish w/o message or handle');
+my ($is_broken_pipe, $fatal, $message) = $cv->recv;
+ok($is_broken_pipe, '... is broken pipe');
+ok($fatal, '... is fatal');
+like($message, qr/broken pipe/i, '... broken pipe');
