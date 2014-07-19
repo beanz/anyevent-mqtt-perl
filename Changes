@@ -1,5 +1,7 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
+1.142000  2014-07-19 11:21:43+01:00 Europe/London
+
 1.141992  2014-07-18 14:36:30+01:00 Europe/London
     - Fix bad release tar.gz.
 
