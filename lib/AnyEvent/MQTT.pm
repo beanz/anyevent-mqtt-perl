@@ -134,8 +134,10 @@ sub publish {
 
 sub next_message_id {
   my $self = shift;
+  my $res = $self->{message_id};
   $self->{message_id}++;
   $self->{message_id} %= 65536;
+  $res;
 }
 
 sub _send_with_ack {
