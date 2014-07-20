@@ -1,6 +1,7 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+    - Fix message ids large than 16-bits. (Thanks to wnagele on github.)
 
 1.141992  2014-07-18 14:36:30+01:00 Europe/London
     - Fix bad release tar.gz.
