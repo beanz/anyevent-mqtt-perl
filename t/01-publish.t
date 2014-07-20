@@ -54,7 +54,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;
 
-plan tests => 18;
+plan tests => 19;
 
 use_ok('AnyEvent::MQTT');
 
@@ -132,7 +132,7 @@ is_deeply(\@messages,
           ], '... message log');
 
 my $ok = 1;
-foreach (0..100000) {
+foreach (0..70000) {
   next if ($mqtt->next_message_id < 65536);
   $ok = 0;
 }
