@@ -110,6 +110,10 @@ METHODS
           L<AnyEvent::Handle#push_read> method (defaults to ['line'] to read,
           and subsequently publish, a line at a time.
 
+  "next_message_id()"
+    Returns a 16-bit number to use as the next message id in a message
+    requiring an acknowledgement.
+
   "subscribe( %parameters )"
     This method subscribes to the given topic. The parameter hash may
     contain values for the following keys:

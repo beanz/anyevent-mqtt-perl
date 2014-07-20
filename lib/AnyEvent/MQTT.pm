@@ -132,6 +132,7 @@ sub publish {
   return $cv;
 }
 
+
 sub next_message_id {
   my $self = shift;
   my $res = $self->{message_id};
@@ -795,6 +796,11 @@ The parameter hash may also keys for:
   and subsequently publish, a line at a time.
 
 =back
+
+=head2 C<next_message_id()>
+
+Returns a 16-bit number to use as the next message id in a message requiring
+an acknowledgement.
 
 =head2 C<subscribe( %parameters )>
 
