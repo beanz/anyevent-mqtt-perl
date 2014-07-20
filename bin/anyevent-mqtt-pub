@@ -67,7 +67,7 @@ anyevent-mqtt-pub - Perl script for publishing to an MQTT topic
 
 =head1 VERSION
 
-version 1.142000
+version 1.142010
 
 =head1 SYNOPSIS
 

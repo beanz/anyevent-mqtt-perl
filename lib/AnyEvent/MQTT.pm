@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT;
-$AnyEvent::MQTT::VERSION = '1.142000';
+$AnyEvent::MQTT::VERSION = '1.142010';
 # ABSTRACT: AnyEvent module for an MQTT client
 
 
@@ -132,11 +132,17 @@ sub publish {
   return $cv;
 }
 
+sub next_message_id {
+  my $self = shift;
+  $self->{message_id}++;
+  $self->{message_id} %= 65536;
+}
+
 sub _send_with_ack {
   my ($self, $args, $cv, $expect, $dup) = @_;
   if ($args->{qos}) {
     unless (exists $args->{message_id}) {
-      $args->{message_id} = $self->{message_id}++;
+      $args->{message_id} = $self->next_message_id();
     }
     my $mid = $args->{message_id};
     my $send_cv = AnyEvent->condvar;
@@ -217,7 +223,7 @@ sub _add_subscription {
     push @{$rec->{cv}}, $cv;
     return;
   }
-  my $mid = $self->{message_id}++;
+  my $mid = $self->next_message_id();
   print STDERR "Add $sub as pending $topic subscription (mid=$mid)\n" if DEBUG;
   $self->{_sub_pending_by_message_id}->{$mid} = $topic;
   $self->{_sub_pending}->{$topic} =
@@ -255,7 +261,7 @@ sub _remove_subscription {
     }
   }
   print STDERR "Remove of $topic\n" if DEBUG;
-  my $mid = $self->{message_id}++;
+  my $mid = $self->next_message_id();
   delete $self->{_sub}->{$topic};
   $self->{_sub_topics}->delete($topic);
   $self->{_unsub_pending_by_message_id}->{$mid} = $topic;
@@ -644,7 +650,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.142000
+version 1.142010
 
 =head1 SYNOPSIS
 
