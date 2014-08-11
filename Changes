@@ -1,6 +1,7 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+    - Don't check locale-specific error message to avoid test failure.
 
 1.142010  2014-07-20 13:35:48+01:00 Europe/London
     - Fix message ids large than 16-bits. (Thanks to wnagele on github.)
