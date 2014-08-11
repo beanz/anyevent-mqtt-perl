@@ -43,7 +43,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;
 
-plan tests => 6;
+plan tests => 5;
 
 use_ok('AnyEvent::MQTT');
 
