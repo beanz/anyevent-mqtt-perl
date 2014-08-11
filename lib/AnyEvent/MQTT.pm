@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT;
-$AnyEvent::MQTT::VERSION = '1.142010';
+$AnyEvent::MQTT::VERSION = '1.142230';
 # ABSTRACT: AnyEvent module for an MQTT client
 
 
@@ -653,7 +653,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.142010
+version 1.142230
 
 =head1 SYNOPSIS
 

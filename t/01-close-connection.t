@@ -43,7 +43,7 @@ plan skip_all => "Failed to create dummy server: $@" if ($@);
 
 my ($host, $port) = $server->connect_address;
 
-plan tests => 6;
+plan tests => 5;
 
 use_ok('AnyEvent::MQTT');
 
@@ -59,4 +59,3 @@ $cv = $mqtt->connect();
 my ($is_broken_pipe, $fatal, $message) = $cv->recv;
 ok($is_broken_pipe, '... is broken pipe');
 ok($fatal, '... is fatal');
-like($message, qr/broken pipe/i, '... broken pipe');
