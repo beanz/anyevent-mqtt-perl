@@ -11,7 +11,6 @@ README
 bin/anyevent-mqtt-monitor
 bin/anyevent-mqtt-pub
 bin/anyevent-mqtt-sub
-debian/#_assh_bcee_b_ahome_abeanz_agit_agithub_aanyevent-mqtt-perl_adebian_achangelog#
 debian/changelog
 debian/compat
 debian/control
