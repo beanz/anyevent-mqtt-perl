@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT;
-$AnyEvent::MQTT::VERSION = '1.142230';
+$AnyEvent::MQTT::VERSION = '1.142640';
 # ABSTRACT: AnyEvent module for an MQTT client
 
 
@@ -653,7 +653,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.142230
+version 1.142640
 
 =head1 SYNOPSIS
 
@@ -713,6 +713,14 @@ The timeout for responses from the server.
 
 The keep alive timer.
 
+=item C<user_name>
+
+The user name for the MQTT broker.
+
+=item C<password>
+
+The password for the MQTT broker.
+
 =item C<will_topic>
 
 Set topic for will message.  Default is undef which means no will
@@ -743,6 +751,17 @@ is C<Net::MQTT::Message[NNNNN]> where NNNNN is the process id.
 =item C<message_log_callback>
 
 Defines a callback to call on every message.
+
+=item C<on_error>
+
+Defines a callback to call when some error occurs.
+
+Two params are passed to the callback.
+
+    $on_error->($fatal, $message)
+
+where C<$fatal> is a boolean flag and C<$message> is the error message.
+If the error is fatal, C<$fatal> is true.
 
 =back
 
