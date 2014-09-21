@@ -756,7 +756,7 @@ Defines a callback to call on every message.
 
 Defines a callback to call when some error occurs.
 
-Two params are passed to the callback.
+Two parameters are passed to the callback.
 
     $on_error->($fatal, $message)
 

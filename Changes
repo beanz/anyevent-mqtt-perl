@@ -1,6 +1,7 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
-1.142640  2014-09-21 19:02:34+01:00 Europe/London
+1.142640  2014-09-21 19:08:50+01:00 Europe/London
+    - Documentation fixes. (Thanks to Toshio Ito.)
 
 1.142230  2014-08-11 18:32:39+01:00 Europe/London
     - Don't check locale-specific error message to avoid test failure.

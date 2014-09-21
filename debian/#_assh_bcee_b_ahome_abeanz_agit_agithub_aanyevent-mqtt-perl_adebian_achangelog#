@@ -1,0 +1,73 @@
+libanyevent-mqtt-perl (1.142010-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Mark Hindess (Debian Packages) <soft-debian@temporalanomaly.com>  Sun, 20 Jul 2014 13:35:48 +0100
+
+libanyevent-mqtt-perl (1.142010-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Mark Hindess (Debian Packages) <soft-debian@temporalanomaly.com>  Sun, 20 Jul 2014 13:35:48 +0100
+
+libanyevent-mqtt-perl (1.141992-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Mark Hindess (Debian Packages) <soft-debian@temporalanomaly.com>  Fri, 18 Jul 2014 14:36:30 +0100
+
+libanyevent-mqtt-perl (1.112340-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Mon, 22 Aug 2011 20:22:40 +0100
+
+libanyevent-mqtt-perl (1.112320-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Sat, 20 Aug 2011 23:12:35 +0100
+
+libanyevent-mqtt-perl (1.111981-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Sun, 17 Jul 2011 22:54:00 +0100
+
+libanyevent-mqtt-perl (1.111980-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Sun, 17 Jul 2011 22:31:37 +0100
+
+libanyevent-mqtt-perl (1.110880-1) unstable; urgency=low
+
+  * New script 'anyevent-mqtt-monitor' (requires Gtk2).
+  * Support for simple unsubscribe.
+  * New callback, 'message_log_callback', to log every incoming and
+    outgoing message.
+  * Avoid some cyclic references that lead to memory leaks.
+  * Use Sub::Name to aid debugging of anonymous subroutines.
+
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Tue, 29 Mar 2011 22:23:16 +0100
+
+libanyevent-mqtt-perl (1.110390-1) unstable; urgency=low
+
+  * Add retain flag support.
+  * Add missing debian libanyevent-perl dependency.
+  * Improve tests to make them easier to debug.
+
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Tue,  8 Feb 2011 23:01:05 +0000
+
+libanyevent-mqtt-perl (1.110240-1) unstable; urgency=low
+
+  * Support subscribe method with QoS levels 1 and 2.
+  * Support publish method with QoS levels 1 and 2.
+
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Mon, 24 Jan 2011 21:19:02 +0000
+
+libanyevent-mqtt-perl (1.110220-1) unstable; urgency=low
+
+  * Initial release.
+
+ -- Mark Hindess <soft-debian@temporalanomaly.com>  Sat, 22 Jan 2011 15:29:52 +0000
