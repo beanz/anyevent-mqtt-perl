@@ -2,7 +2,7 @@ NAME
     AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 VERSION
-    version 1.142230
+    version 1.142640
 
 SYNOPSIS
       use AnyEvent::MQTT;
@@ -51,6 +51,12 @@ METHODS
     "keep_alive_timer"
         The keep alive timer.
 
+    "user_name"
+        The user name for the MQTT broker.
+
+    "password"
+        The password for the MQTT broker.
+
     "will_topic"
         Set topic for will message. Default is undef which means no will
         message will be configured.
@@ -74,6 +80,16 @@ METHODS
 
     "message_log_callback"
         Defines a callback to call on every message.
+
+    "on_error"
+        Defines a callback to call when some error occurs.
+
+        Two parameters are passed to the callback.
+
+            $on_error->($fatal, $message)
+
+        where $fatal is a boolean flag and $message is the error message. If
+        the error is fatal, $fatal is true.
 
   "cleanup()"
     This method attempts to destroy any resources in the event of a
