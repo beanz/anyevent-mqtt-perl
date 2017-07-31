@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT;
-$AnyEvent::MQTT::VERSION = '1.142640';
+$AnyEvent::MQTT::VERSION = '1.172120';
 # ABSTRACT: AnyEvent module for an MQTT client
 
 
@@ -36,6 +36,7 @@ sub new {
            will_message => '',
            client_id => undef,
            clean_session => 1,
+           handle_args => [],
            write_queue => [],
            inflight => {},
            _sub_topics => Net::MQTT::TopicStore->new(),
@@ -437,7 +438,9 @@ sub connect {
                                                 1;
                                               });
                             });
-                          }));
+                          }),
+                          @{$self->{handle_args}},
+                         );
   return $cv
 }
 
@@ -653,7 +656,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.142640
+version 1.172120
 
 =head1 SYNOPSIS
 
@@ -746,7 +749,7 @@ it is set to 0 when reconnecting after an error.
 =item C<client_id>
 
 Sets the client id for the client overriding the default which
-is C<Net::MQTT::Message[NNNNN]> where NNNNN is the process id.
+is C<NetMQTTpmNNNNN> where NNNNN is the current process id.
 
 =item C<message_log_callback>
 
@@ -762,6 +765,12 @@ Two parameters are passed to the callback.
 
 where C<$fatal> is a boolean flag and C<$message> is the error message.
 If the error is fatal, C<$fatal> is true.
+
+=item C<handle_args>
+
+  a reference to a list to pass as arguments to the
+  L<AnyEvent::Handle> constructor (defaults to
+  an empty list reference).
 
 =back
 
