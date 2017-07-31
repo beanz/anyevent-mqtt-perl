@@ -1,10 +1,5 @@
-NAME
-    AnyEvent::MQTT - AnyEvent module for an MQTT client
-
-VERSION
-    version 1.142640
-
 SYNOPSIS
+
       use AnyEvent::MQTT;
       my $mqtt = AnyEvent::MQTT->new;
       my $cv = $mqtt->subscribe(topic => '/topic',
@@ -13,179 +8,226 @@ SYNOPSIS
                                      print $topic, ' ', $message, "\n"
                                    });
       my $qos = $cv->recv; # subscribed, negotiated QoS == $qos
-
+    
       # publish a simple message
       $cv = $mqtt->publish(message => 'simple message',
                               topic => '/topic');
       $cv->recv; # sent
-
+    
       # publish line-by-line from file handle
       $cv =  $mqtt->publish(handle => \*STDIN,
                             topic => '/topic');
       $cv->recv; # sent
-
+    
       # publish from AnyEvent::Handle
       $cv = $mqtt->publish(handle => AnyEvent::Handle->new(my %handle_args),
                            topic => '/topic');
       $cv->recv; # sent
 
 DESCRIPTION
+
     AnyEvent module for MQTT client.
 
     IMPORTANT: This is an early release and the API is still subject to
     change.
 
-METHODS
-  "new(%params)"
-    Constructs a new "AnyEvent::MQTT" object. The supported parameters are:
+DISCLAIMER
 
-    "host"
-        The server host. Defaults to 127.0.0.1.
+    This is not official IBM code. I work for IBM but I'm writing this in
+    my spare time (with permission) for fun.
 
-    "port"
-        The server port. Defaults to 1883.
+    Constructs a new AnyEvent::MQTT object. The supported parameters are:
 
-    "timeout"
-        The timeout for responses from the server.
+    host
 
-    "keep_alive_timer"
-        The keep alive timer.
+      The server host. Defaults to 127.0.0.1.
 
-    "user_name"
-        The user name for the MQTT broker.
+    port
 
-    "password"
-        The password for the MQTT broker.
+      The server port. Defaults to 1883.
 
-    "will_topic"
-        Set topic for will message. Default is undef which means no will
-        message will be configured.
+    timeout
 
-    "will_qos"
-        Set QoS for will message. Default is 'at-most-once'.
+      The timeout for responses from the server.
 
-    "will_retain"
-        Set retain flag for will message. Default is 0.
+    keep_alive_timer
 
-    "will_message"
-        Set message for will message. Default is the empty message.
+      The keep alive timer.
 
-    "clean_session"
-        Set clean session flag for connect message. Default is 1 but it is
-        set to 0 when reconnecting after an error.
+    user_name
 
-    "client_id"
-        Sets the client id for the client overriding the default which is
-        "Net::MQTT::Message[NNNNN]" where NNNNN is the process id.
+      The user name for the MQTT broker.
 
-    "message_log_callback"
-        Defines a callback to call on every message.
+    password
 
-    "on_error"
-        Defines a callback to call when some error occurs.
+      The password for the MQTT broker.
 
-        Two parameters are passed to the callback.
+    will_topic
 
-            $on_error->($fatal, $message)
+      Set topic for will message. Default is undef which means no will
+      message will be configured.
 
-        where $fatal is a boolean flag and $message is the error message. If
-        the error is fatal, $fatal is true.
+    will_qos
 
-  "cleanup()"
+      Set QoS for will message. Default is 'at-most-once'.
+
+    will_retain
+
+      Set retain flag for will message. Default is 0.
+
+    will_message
+
+      Set message for will message. Default is the empty message.
+
+    clean_session
+
+      Set clean session flag for connect message. Default is 1 but it is
+      set to 0 when reconnecting after an error.
+
+    client_id
+
+      Sets the client id for the client overriding the default which is
+      NetMQTTpmNNNNN where NNNNN is the current process id.
+
+    message_log_callback
+
+      Defines a callback to call on every message.
+
+    on_error
+
+      Defines a callback to call when some error occurs.
+
+      Two parameters are passed to the callback.
+
+          $on_error->($fatal, $message)
+
+      where $fatal is a boolean flag and $message is the error message. If
+      the error is fatal, $fatal is true.
+
     This method attempts to destroy any resources in the event of a
     disconnection or fatal error.
 
-  "publish( %parameters )"
     This method is used to publish to a given topic. It returns an AnyEvent
     condvar which is notified when the publish is complete (written to the
     kernel or ack'd depending on the QoS level). The parameter hash must
     included at least a topic value and one of:
 
     message
-          with a string value which is published to the topic,
+
+        with a string value which is published to the topic,
 
     handle
-         the value of which must either be an L<AnyEvent::Handle> or will be
-         passed to an L<AnyEvent::Handle> constructor as the C<fh> argument.
-         The L<push_read()> method is called on the L<AnyEvent::Handle> with a
-         callback that will publish each chunk read to the topic.
+
+       the value of which must either be an L<AnyEvent::Handle> or will be
+       passed to an L<AnyEvent::Handle> constructor as the C<fh> argument.
+       The L<push_read()> method is called on the L<AnyEvent::Handle> with a
+       callback that will publish each chunk read to the topic.
 
     The parameter hash may also keys for:
 
-    "qos"
-          to set the QoS level for published messages (default
-          MQTT_QOS_AT_MOST_ONCE),
+    qos
 
-    "handle_args"
-          a reference to a list to pass as arguments to the
-          L<AnyEvent::Handle> constructor in the final case above (defaults to
-          an empty list reference), or
+        to set the QoS level for published messages (default
+        MQTT_QOS_AT_MOST_ONCE),
 
-    "push_read_args"
-          a reference to a list to pass as the arguments to the
-          L<AnyEvent::Handle#push_read> method (defaults to ['line'] to read,
-          and subsequently publish, a line at a time.
+    handle_args
 
-  "next_message_id()"
+        a reference to a list to pass as arguments to the
+        L<AnyEvent::Handle> constructor in the final case above (defaults to
+        an empty list reference), or
+
+    push_read_args
+
+        a reference to a list to pass as the arguments to the
+        L<AnyEvent::Handle#push_read> method (defaults to ['line'] to read,
+        and subsequently publish, a line at a time.
+
     Returns a 16-bit number to use as the next message id in a message
     requiring an acknowledgement.
 
-  "subscribe( %parameters )"
     This method subscribes to the given topic. The parameter hash may
     contain values for the following keys:
 
     topic
-          for the topic to subscribe to (this is required),
+
+        for the topic to subscribe to (this is required),
 
     callback
-          for the callback to call with messages (this is required),
+
+        for the callback to call with messages (this is required),
 
     qos
-          QoS level to use (default is MQTT_QOS_AT_MOST_ONCE),
+
+        QoS level to use (default is MQTT_QOS_AT_MOST_ONCE),
 
     cv
-          L<AnyEvent> condvar to use to signal the subscription is complete.
-          The received value will be the negotiated QoS level.
+
+        L<AnyEvent> condvar to use to signal the subscription is complete.
+        The received value will be the negotiated QoS level.
 
     This method returns the value of the cv parameter if it was supplied or
     an AnyEvent condvar created for this purpose.
 
-  "unsubscribe( %parameters )"
     This method unsubscribes to the given topic. The parameter hash may
     contain values for the following keys:
 
     topic
-          for the topic to unsubscribe from (this is required),
+
+        for the topic to unsubscribe from (this is required),
 
     callback
-          for the callback to call with messages (this is optional and currently
-          not supported - all callbacks are unsubscribed),
+
+        for the callback to call with messages (this is optional and currently
+        not supported - all callbacks are unsubscribed),
 
     cv
-          L<AnyEvent> condvar to use to signal the unsubscription is complete.
+
+        L<AnyEvent> condvar to use to signal the unsubscription is complete.
 
     This method returns the value of the cv parameter if it was supplied or
     an AnyEvent condvar created for this purpose.
 
-  "connect( [ $msg ] )"
     This method starts the connection to the server. It will be called
     lazily when required publish or subscribe so generally is should not be
     necessary to call it directly.
 
-  "anyevent_read_type()"
     This method is used to register an AnyEvent::Handle read type method to
     read MQTT messages.
 
-DISCLAIMER
-    This is not official IBM code. I work for IBM but I'm writing this in my
-    spare time (with permission) for fun.
+POD ERRORS
 
-AUTHOR
-    Mark Hindess <soft-cpan@temporalanomaly.com>
+    Hey! The above document had some coding errors, which are explained
+    below:
 
-COPYRIGHT AND LICENSE
-    This software is copyright (c) 2014 by Mark Hindess.
+    Around line 39:
 
-    This is free software; you can redistribute it and/or modify it under
-    the same terms as the Perl 5 programming language system itself.
+      Unknown directive: =method
+
+    Around line 115:
+
+      Unknown directive: =method
+
+    Around line 120:
+
+      Unknown directive: =method
+
+    Around line 166:
+
+      Unknown directive: =method
+
+    Around line 171:
+
+      Unknown directive: =method
+
+    Around line 200:
+
+      Unknown directive: =method
+
+    Around line 225:
+
+      Unknown directive: =method
+
+    Around line 231:
+
+      Unknown directive: =method
 

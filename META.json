@@ -4,7 +4,7 @@
       "Mark Hindess <soft-cpan@temporalanomaly.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 5.019, CPAN::Meta::Converter version 2.141520",
+   "generated_by" : "Dist::Zilla version 6.008, CPAN::Meta::Converter version 2.150005",
    "license" : [
       "perl_5"
    ],
@@ -16,17 +16,21 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "ExtUtils::MakeMaker" : "6.30"
+            "ExtUtils::MakeMaker" : "0"
          }
       },
       "develop" : {
          "requires" : {
             "Pod::Coverage::TrustPod" : "0",
-            "Test::Kwalitee" : "1.12",
-            "Test::More" : "0",
+            "Test::EOL" : "0",
+            "Test::Kwalitee" : "1.21",
+            "Test::More" : "0.88",
             "Test::NoTabs" : "0",
             "Test::Pod" : "1.41",
-            "Test::Pod::Coverage" : "1.08"
+            "Test::Pod::Coverage" : "1.08",
+            "Test::Pod::LinkCheck" : "0",
+            "Test::Pod::No404s" : "0",
+            "Test::Synopsis" : "0"
          }
       },
       "runtime" : {
@@ -74,6 +78,7 @@
          "web" : "https://github.com/beanz/anyevent-mqtt-perl"
       }
    },
-   "version" : "1.142640"
+   "version" : "1.172120",
+   "x_serialization_backend" : "JSON::XS version 3.01"
 }
 
