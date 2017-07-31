@@ -110,7 +110,7 @@ it is set to 0 when reconnecting after an error.
 =item C<client_id>
 
 Sets the client id for the client overriding the default which
-is C<Net::MQTT::Message[NNNNN]> where NNNNN is the process id.
+is C<NetMQTTpmNNNNN> where NNNNN is the current process id.
 
 =item C<message_log_callback>
 

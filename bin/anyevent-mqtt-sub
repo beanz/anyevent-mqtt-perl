@@ -29,6 +29,13 @@ The host running the MQTT service.  The default is C<127.0.0.1>.
 
 The port of the running MQTT service.  The default is 1883.
 
+=item B<-client-id STRING>
+
+The client id to use in the connect message.  The default is
+'NetMQTTpm' followed by the process id of the process.  This
+should be up to 23 characters and only use the characters
+A-Z, a-z, and 0-9 for maximum compatibility.
+
 =item B<-qos N>
 
 The QoS level for the published message.  The default is
@@ -122,6 +129,7 @@ my $retain = 1;
 my $qos = MQTT_QOS_AT_MOST_ONCE;
 my $count;
 my $keep_alive_timer = 120;
+my $client_id;
 my $code;
 GetOptions('help|?' => \$help,
            'man' => \$man,
@@ -133,14 +141,18 @@ GetOptions('help|?' => \$help,
            'count=i' => \$count,
            'one|1' => sub { $count = 1 },
            'keepalive=i' => \$keep_alive_timer,
+           'client_id|client-id|C=s' => \$client_id,
            'code|e=s' => \$code) or pod2usage(2);
 pod2usage(1) if ($help);
 pod2usage(-exitstatus => 0, -verbose => 2) if $man;
 pod2usage(2) unless (@ARGV); # need a topic
 
+my @args;
+push @args, client_id => $client_id if (defined $client_id);
 my $mqtt =
   AnyEvent::MQTT->new(host => $host, port => $port,
                       keep_alive_timer => $keep_alive_timer,
+                      @args,
                       on_error => sub {
                         my ($fatal, $message) = @_;
                         if ($fatal) {
