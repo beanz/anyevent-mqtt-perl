@@ -1,6 +1,7 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+    - Fix travis builds (and changelog)
 
 1.172120  2017-07-31 19:35:44+01:00 Europe/London
     - Add client_id option to command line examples
