@@ -104,6 +104,12 @@ DISCLAIMER
       where $fatal is a boolean flag and $message is the error message. If
       the error is fatal, $fatal is true.
 
+    handle_args
+
+        a reference to a list to pass as arguments to the
+        L<AnyEvent::Handle> constructor (defaults to
+        an empty list reference).
+
     This method attempts to destroy any resources in the event of a
     disconnection or fatal error.
 
@@ -203,15 +209,11 @@ POD ERRORS
 
       Unknown directive: =method
 
-    Around line 115:
-
-      Unknown directive: =method
-
     Around line 120:
 
       Unknown directive: =method
 
-    Around line 166:
+    Around line 125:
 
       Unknown directive: =method
 
@@ -219,15 +221,19 @@ POD ERRORS
 
       Unknown directive: =method
 
-    Around line 200:
+    Around line 176:
 
       Unknown directive: =method
 
-    Around line 225:
+    Around line 205:
 
       Unknown directive: =method
 
-    Around line 231:
+    Around line 230:
+
+      Unknown directive: =method
+
+    Around line 236:
 
       Unknown directive: =method
 
