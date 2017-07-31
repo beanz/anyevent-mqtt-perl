@@ -1,6 +1,8 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
 {{$NEXT}}
+
+1.172120  2017-07-31 19:35:44+01:00 Europe/London
     - Add client_id option to command line examples
 
 1.142640  2014-09-21 19:14:14+01:00 Europe/London
