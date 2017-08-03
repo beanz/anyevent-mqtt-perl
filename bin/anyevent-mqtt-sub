@@ -94,7 +94,7 @@ anyevent-mqtt-sub - Perl script for subscribing to an MQTT topic
 
 =head1 VERSION
 
-version 1.172121
+version 1.172150
 
 =head1 SYNOPSIS
 
