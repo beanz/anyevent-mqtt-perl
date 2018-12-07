@@ -691,6 +691,13 @@ sub connect {
 sub _reconnect {
   my $self = shift;
   print STDERR "reconnecting:\n" if DEBUG;
+
+  # must resubscribe everything
+  if ($self->{clean_session}) {
+    $self->{_sub_topics} = Net::MQTT::TopicStore->new();
+    $self->{_sub_reconnect} = delete $self->{_sub} || {};
+  }
+
   $self->connect(@_);
 }
 
@@ -742,6 +749,15 @@ sub _process_connack {
                       $weak_self->_write_now;
                       1;
                     });
+
+  # handle reconnect
+  while (my ($topic, $rec) = each %{$self->{_sub_reconnect}}) {
+    print STDERR "Resubscribing to '$topic':\n" if DEBUG;
+    for my $cb (values %{$rec->{cb}}) {
+      $self->subscribe(topic => $topic, callback => $cb, qos => $rec->{qos});
+    }
+  }
+  delete $self->{_sub_reconnect};
   return
 }
 
