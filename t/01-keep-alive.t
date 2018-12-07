@@ -37,7 +37,7 @@ my @connections =
     [ sleep => 0.5,  q{pingreq timeout} ],
    ],
    [
-    [ packrecv => '10 17 00 06  4D 51 49 73   64 70 03 00  00 78 00 09
+    [ packrecv => '10 17 00 06  4D 51 49 73   64 70 03 02  00 78 00 09
                    61 63 6D 65  5F 6D 71 74   74', q{connect} ],
     [ packsend => '20 02 00 00', q{connack} ],
     [ packrecv => '82 08 00 01  00 03 2F 74   31 00', q{subscribe /t1} ],

@@ -447,7 +447,6 @@ sub connect {
 sub _reconnect {
   my $self = shift;
   print STDERR "reconnecting:\n" if DEBUG;
-  $self->{clean_session} = 0;
   $self->connect(@_);
 }
 
@@ -743,8 +742,7 @@ Set message for will message.  Default is the empty message.
 
 =item C<clean_session>
 
-Set clean session flag for connect message.  Default is 1 but
-it is set to 0 when reconnecting after an error.
+Set clean session flag for connect message.  Default is 1.
 
 =item C<client_id>
 
