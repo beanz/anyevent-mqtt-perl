@@ -414,6 +414,8 @@ sub connect {
                           on_connect => subname('on_connect_cb' => sub {
                             my ($handle, $host, $port, $retry) = @_;
                             print STDERR "TCP handshake complete\n" if DEBUG;
+                            # call user-defined on_connect function.
+                            $weak_self->{on_connect}->($handle, $retry) if $weak_self->{on_connect};
                             my $msg =
                               Net::MQTT::Message->new(
                                 message_type => MQTT_CONNECT,
