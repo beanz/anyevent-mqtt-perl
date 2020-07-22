@@ -318,7 +318,7 @@ sub next_message_id {
   my $self = shift;
   my $res = $self->{message_id};
   $self->{message_id}++;
-  $self->{message_id} %= 65536;
+  $self->{message_id} = 1 if $self->{message_id} >= 65536;
   $res;
 }
 
