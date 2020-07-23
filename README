@@ -81,8 +81,7 @@ DISCLAIMER
 
     clean_session
 
-      Set clean session flag for connect message. Default is 1 but it is
-      set to 0 when reconnecting after an error.
+      Set clean session flag for connect message. Default is 1.
 
     client_id
 
@@ -209,31 +208,31 @@ POD ERRORS
 
       Unknown directive: =method
 
-    Around line 120:
+    Around line 119:
 
       Unknown directive: =method
 
-    Around line 125:
+    Around line 124:
 
       Unknown directive: =method
 
-    Around line 171:
+    Around line 170:
 
       Unknown directive: =method
 
-    Around line 176:
+    Around line 175:
 
       Unknown directive: =method
 
-    Around line 205:
+    Around line 204:
 
       Unknown directive: =method
 
-    Around line 230:
+    Around line 229:
 
       Unknown directive: =method
 
-    Around line 236:
+    Around line 235:
 
       Unknown directive: =method
 

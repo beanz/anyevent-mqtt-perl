@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT;
-$AnyEvent::MQTT::VERSION = '1.202051';
+$AnyEvent::MQTT::VERSION = '1.202050';
 # ABSTRACT: AnyEvent module for an MQTT client
 
 
@@ -449,7 +449,13 @@ sub connect {
 sub _reconnect {
   my $self = shift;
   print STDERR "reconnecting:\n" if DEBUG;
-  $self->{clean_session} = 0;
+
+  # must resubscribe everything
+  if ($self->{clean_session}) {
+    $self->{_sub_topics} = Net::MQTT::TopicStore->new();
+    $self->{_sub_reconnect} = delete $self->{_sub} || {};
+  }
+
   $self->connect(@_);
 }
 
@@ -501,6 +507,15 @@ sub _process_connack {
                       $weak_self->_write_now;
                       1;
                     });
+
+  # handle reconnect
+  while (my ($topic, $rec) = each %{$self->{_sub_reconnect}}) {
+    print STDERR "Resubscribing to '$topic':\n" if DEBUG;
+    for my $cb (values %{$rec->{cb}}) {
+      $self->subscribe(topic => $topic, callback => $cb, qos => $rec->{qos});
+    }
+  }
+  delete $self->{_sub_reconnect};
   return
 }
 
@@ -658,7 +673,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.202051
+version 1.202050
 
 =head1 SYNOPSIS
 
@@ -745,8 +760,7 @@ Set message for will message.  Default is the empty message.
 
 =item C<clean_session>
 
-Set clean session flag for connect message.  Default is 1 but
-it is set to 0 when reconnecting after an error.
+Set clean session flag for connect message.  Default is 1.
 
 =item C<client_id>
 
