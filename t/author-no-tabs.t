@@ -39,12 +39,12 @@ my @files = (
     't/author-eol.t',
     't/author-no-tabs.t',
     't/author-pod-coverage.t',
+    't/author-pod-linkcheck.t',
     't/author-pod-no404s.t',
     't/author-pod-syntax.t',
     't/author-synopsis.t',
     't/release-common_spelling.t',
-    't/release-kwalitee.t',
-    't/release-pod-linkcheck.t'
+    't/release-kwalitee.t'
 );
 
 notabs_ok($_) foreach @files;

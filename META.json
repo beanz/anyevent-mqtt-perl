@@ -4,7 +4,7 @@
       "Mark Hindess <soft-cpan@temporalanomaly.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 6.008, CPAN::Meta::Converter version 2.150005",
+   "generated_by" : "Dist::Zilla version 6.012, CPAN::Meta::Converter version 2.143240",
    "license" : [
       "perl_5"
    ],
@@ -26,6 +26,7 @@
             "Test::Kwalitee" : "1.21",
             "Test::More" : "0.88",
             "Test::NoTabs" : "0",
+            "Test::Perl::Critic" : "0",
             "Test::Pod" : "1.41",
             "Test::Pod::Coverage" : "1.08",
             "Test::Pod::LinkCheck" : "0",
@@ -78,7 +79,8 @@
          "web" : "https://github.com/beanz/anyevent-mqtt-perl"
       }
    },
-   "version" : "1.172121",
-   "x_serialization_backend" : "JSON::XS version 3.01"
+   "version" : "1.202050",
+   "x_generated_by_perl" : "v5.26.1",
+   "x_serialization_backend" : "JSON::XS version 3.04"
 }
 
