@@ -79,7 +79,7 @@
          "web" : "https://github.com/beanz/anyevent-mqtt-perl"
       }
    },
-   "version" : "1.202050",
+   "version" : "1.202052",
    "x_generated_by_perl" : "v5.26.1",
    "x_serialization_backend" : "JSON::XS version 3.04"
 }

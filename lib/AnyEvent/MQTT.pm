@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT;
-$AnyEvent::MQTT::VERSION = '1.202050';
+$AnyEvent::MQTT::VERSION = '1.202052';
 # ABSTRACT: AnyEvent module for an MQTT client
 
 
@@ -287,6 +287,18 @@ sub _confirm_subscription {
   foreach my $cv (@{$rec->{cv}}) {
     $cv->send($qos);
   }
+
+  # publish any matching queued QoS messages
+  if (!$self->{clean_session} && $qos && $self->{_qos_msg_cache}) {
+    my $cache = $self->{_qos_msg_cache};
+    my $ts = Net::MQTT::TopicStore->new($topic);
+    for my $i (grep { $ts->values($cache->[$_]->topic) } reverse(0..$#$cache)) {
+      my $msg = delete $cache->[$i];
+      print STDERR "Processing cached message for topic '", $msg->topic, "' with subscription to topic '$topic'\n" if DEBUG;
+      $self->_process_publish($self->{handle}, $msg);
+    }
+    delete $self->{_qos_msg_cache} unless @$cache;
+  }
   delete $rec->{cv};
 }
 
@@ -570,6 +582,14 @@ sub _publish_locally {
 sub _process_publish {
   my ($self, $handle, $msg, $error) = @_;
   my $qos = $msg->qos;
+
+  # assuming this was intended for a subscription not yet restored
+  if ($qos && !$self->{clean_session} && !@{$self->{_sub_topics}->values($msg->topic)}) {
+    print STDERR "Caching message for '", $msg->topic, "'\n" if DEBUG;
+    push(@{$self->{_qos_msg_cache}}, $msg);
+    return;
+  }
+
   if ($qos == MQTT_QOS_EXACTLY_ONCE) {
     my $mid = $msg->message_id;
     $self->{messages}->{$mid} = $msg;
@@ -673,7 +693,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.202050
+version 1.202052
 
 =head1 SYNOPSIS
 
