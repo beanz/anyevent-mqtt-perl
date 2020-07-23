@@ -1,8 +1,8 @@
 #!perl
 
 BEGIN {
-  unless ($ENV{RELEASE_TESTING}) {
-    print qq{1..0 # SKIP these tests are for release candidate testing\n};
+  unless ($ENV{AUTHOR_TESTING}) {
+    print qq{1..0 # SKIP these tests are for testing by the author\n};
     exit
   }
 }

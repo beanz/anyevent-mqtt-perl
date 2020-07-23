@@ -1,6 +1,6 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
-1.172150  2017-08-03 16:35:35+01:00 Europe/London
+1.202050  2020-07-23 18:52:31+01:00 Europe/London
 
 1.172121  2017-07-31 22:05:49+01:00 Europe/London
     - Fix travis builds (and changelog)

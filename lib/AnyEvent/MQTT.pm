@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT;
-$AnyEvent::MQTT::VERSION = '1.172150';
+$AnyEvent::MQTT::VERSION = '1.202050';
 # ABSTRACT: AnyEvent module for an MQTT client
 
 
@@ -138,7 +138,7 @@ sub next_message_id {
   my $self = shift;
   my $res = $self->{message_id};
   $self->{message_id}++;
-  $self->{message_id} %= 65536;
+  $self->{message_id} = 1 if $self->{message_id} >= 65536;
   $res;
 }
 
@@ -414,6 +414,8 @@ sub connect {
                           on_connect => subname('on_connect_cb' => sub {
                             my ($handle, $host, $port, $retry) = @_;
                             print STDERR "TCP handshake complete\n" if DEBUG;
+                            # call user-defined on_connect function.
+                            $weak_self->{on_connect}->($handle, $retry) if $weak_self->{on_connect};
                             my $msg =
                               Net::MQTT::Message->new(
                                 message_type => MQTT_CONNECT,
@@ -656,7 +658,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.172150
+version 1.202050
 
 =head1 SYNOPSIS
 

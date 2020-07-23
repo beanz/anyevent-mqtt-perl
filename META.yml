@@ -12,7 +12,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: '0'
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 6.008, CPAN::Meta::Converter version 2.150005'
+generated_by: 'Dist::Zilla version 6.012, CPAN::Meta::Converter version 2.143240'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -37,5 +37,6 @@ resources:
   bugtracker: https://github.com/beanz/anyevent-mqtt-perl/issues
   homepage: http://search.cpan.org/dist/AnyEvent-MQTT/
   repository: git://github.com/beanz/anyevent-mqtt-perl.git
-version: '1.172150'
-x_serialization_backend: 'YAML::Tiny version 1.69'
+version: '1.202050'
+x_generated_by_perl: v5.26.1
+x_serialization_backend: 'YAML::Tiny version 1.70'

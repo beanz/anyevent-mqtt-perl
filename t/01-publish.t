@@ -133,7 +133,8 @@ is_deeply(\@messages,
 
 my $ok = 1;
 foreach (0..70000) {
-  next if ($mqtt->next_message_id < 65536);
+  my $mid = $mqtt->next_message_id;
+  next if (0 < $mid && $mid < 65536);
   $ok = 0;
 }
 ok($ok, '... message id should never exceed 16bit size');
