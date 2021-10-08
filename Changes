@@ -1,6 +1,6 @@
 Revision history for Perl extension AnyEvent::MQTT.
 
- 1.212810  2021-10-08 15:56:25+01:00 Europe/London
+ 1.212810  2021-10-08 15:57:55+01:00 Europe/London
 
 1.212810  2021-10-08 13:40:52+01:00 Europe/London
     - Merge pr #12 - adding AnyEvent tls option. Thanks to @jr-dimedis.
