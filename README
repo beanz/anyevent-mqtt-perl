@@ -62,6 +62,10 @@ DISCLAIMER
 
       The password for the MQTT broker.
 
+    tls
+
+      Set flag to enable TLS encryption, Default is no encryption.
+
     will_topic
 
       Set topic for will message. Default is undef which means no will
@@ -208,31 +212,31 @@ POD ERRORS
 
       Unknown directive: =method
 
-    Around line 119:
+    Around line 123:
 
       Unknown directive: =method
 
-    Around line 124:
+    Around line 128:
 
       Unknown directive: =method
 
-    Around line 170:
+    Around line 174:
 
       Unknown directive: =method
 
-    Around line 175:
+    Around line 179:
 
       Unknown directive: =method
 
-    Around line 204:
+    Around line 208:
 
       Unknown directive: =method
 
-    Around line 229:
+    Around line 233:
 
       Unknown directive: =method
 
-    Around line 235:
+    Around line 239:
 
       Unknown directive: =method
 

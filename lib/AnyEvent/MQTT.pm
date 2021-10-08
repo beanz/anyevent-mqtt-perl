@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 package AnyEvent::MQTT;
-$AnyEvent::MQTT::VERSION = '1.202052';
+$AnyEvent::MQTT::VERSION = '1.212810';
 # ABSTRACT: AnyEvent module for an MQTT client
 
 
@@ -30,6 +30,7 @@ sub new {
            message_id => 1,
            user_name => undef,
            password => undef,
+           tls => undef,
            will_topic => undef,
            will_qos => MQTT_QOS_AT_MOST_ONCE,
            will_retain => 0,
@@ -407,6 +408,7 @@ sub connect {
   my $hd;
   $hd = $self->{handle} =
     AnyEvent::Handle->new(connect => [$self->{host}, $self->{port}],
+                          ($self->{tls} ? (tls => "connect") : ()),
                           on_error => subname('on_error_cb' => sub {
                             my ($handle, $fatal, $message) = @_;
                             print STDERR "handle error $_[1]\n" if DEBUG;
@@ -693,7 +695,7 @@ AnyEvent::MQTT - AnyEvent module for an MQTT client
 
 =head1 VERSION
 
-version 1.202052
+version 1.212810
 
 =head1 SYNOPSIS
 
@@ -760,6 +762,10 @@ The user name for the MQTT broker.
 =item C<password>
 
 The password for the MQTT broker.
+
+=item C<tls>
+
+Set flag to enable TLS encryption, Default is no encryption.
 
 =item C<will_topic>
 
